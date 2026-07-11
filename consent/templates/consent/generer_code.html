@@ -1,0 +1,32 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<button class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="location.href='{% url 'consent:mes_acces' %}'">← Retour</button>
+<div class="card" style="max-width:520px">
+  <div class="card-hdr"><div class="card-ttl">🔢 Générer un code temporaire</div></div>
+  <p style="font-size:.85rem;color:var(--slate);margin-bottom:18px">
+    Ce code à 6 chiffres est valable 15 minutes. Donnez-le au médecin qui vous consulte : il l'utilisera avec votre numéro MF pour accéder à votre dossier pour la durée choisie.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="fg" style="margin-bottom:16px">
+      <label class="lbl">Durée de l'accès accordé</label>
+      <select class="fc" name="duree_heures">
+        {% for valeur, label in durees %}<option value="{{ valeur }}" {% if valeur == 48 %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="background:var(--mist);border-radius:var(--rs);padding:14px;font-size:.85rem;line-height:1.6;margin-bottom:16px">
+      <strong>Comment ça marche :</strong>
+      <ol style="margin-top:8px;padding-left:20px;display:flex;flex-direction:column;gap:5px">
+        <li>Donnez ce code au médecin qui vous consulte</li>
+        <li>Le médecin saisit votre numéro MF et ce code</li>
+        <li>L'accès est accordé pour la durée choisie</li>
+        <li>Chaque accès est journalisé et visible ici</li>
+      </ol>
+    </div>
+    <button class="btn btn-p btn-lg btn-full" type="submit">Générer le code →</button>
+  </form>
+</div>
+{% endblock %}

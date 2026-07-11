@@ -1,11 +1,18 @@
+from datetime import timedelta
+
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from accounts.decorators import role_required
 from accounts.models import User
 from audit.models import AuditLog, log_action
+from consent.access import a_acces_valide
+from consent.models import Acces
 
 from .models import GROUPES_SANGUINS, Medecin, Patient
 from .utils import generer_mot_de_passe_provisoire, generer_numero_mf
+
+DUREE_ACCES_CREATION_HEURES = 72
 
 SPECIALITES = [
     "Médecine Générale",
@@ -180,11 +187,9 @@ def admin_stats(request):
 
 @role_required("medecin")
 def medecin_patients(request):
-    patients = (
-        Patient.objects.select_related("user")
-        .filter(cree_par=request.user)
-        .order_by("-date_creation")
-    )
+    patients = list(Patient.objects.select_related("user").order_by("-date_creation"))
+    for patient in patients:
+        patient.a_acces = a_acces_valide(patient, request.user)
     return render(
         request,
         "medical/medecin_patients.html",
@@ -238,10 +243,18 @@ def medecin_patient_creer(request):
                 antecedents=[a.strip() for a in data["antecedents"].split(",") if a.strip()],
                 cree_par=request.user,
             )
+            # Le médecin qui crée un dossier a un accès de 72h (CLAUDE.md) ; ensuite code obligatoire.
+            Acces.objects.create(
+                patient=patient,
+                medecin=request.user,
+                source=Acces.Source.CREATION,
+                expire_le=timezone.now() + timedelta(hours=DUREE_ACCES_CREATION_HEURES),
+            )
             log_action(
                 AuditLog.Action.CREATION_DOSSIER,
                 request=request,
                 user=request.user,
+                patient_concerne=patient,
                 detail=f"{user.prenom} {user.nom} ({numero_mf})",
             )
             request.session[f"fiche_patient_{patient.pk}"] = {"mot_de_passe": mot_de_passe}

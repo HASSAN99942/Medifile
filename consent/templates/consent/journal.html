@@ -1,0 +1,22 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-hdr"><div class="card-ttl">📋 Journal d'audit complet</div></div>
+  <p style="font-size:.82rem;color:var(--slate);margin-bottom:14px">{{ entries|length }} entrée(s) — tous les accès à votre dossier</p>
+  {% for e in entries %}
+  <div class="audit-row">
+    <div class="audit-icon" style="background:var(--teal-pale)"><span style="color:var(--teal)">👁️</span></div>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:.85rem">{{ e.get_action_display }}{% if e.utilisateur %} — {{ e.utilisateur }}{% endif %}</div>
+      <div style="font-size:.75rem;color:var(--slate);margin-top:1px">{{ e.detail }}</div>
+      <div style="font-size:.7rem;color:var(--slate)">{{ e.horodatage|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="empty"><div class="empty-ic">📋</div><div class="empty-t">Aucune entrée</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

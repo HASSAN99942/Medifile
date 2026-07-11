@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'accounts',
     'audit',
     'medical',
+    'consent',
     'core',
 ]
 

@@ -1,0 +1,68 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div style="background:var(--teal-pale);border-radius:var(--rs);padding:12px 16px;margin-bottom:22px;font-size:.85rem;color:var(--teal)">
+  🔒 Seuls vous et vos médecins autorisés peuvent consulter cet historique. Lecture seule.
+</div>
+<div class="ph">
+  <div class="av av-lg" style="background:var(--gold)">{{ patient.user.prenom|slice:":1"|upper }}{{ patient.user.nom|slice:":1"|upper }}</div>
+  <div class="ph-info">
+    <div class="ph-name">{{ patient.user.prenom }} {{ patient.user.nom }}</div>
+    <div class="ph-id">N° MF : {{ patient.numero_mf }} · {{ patient.groupe_sanguin }} · {{ patient.age }} ans · {{ patient.get_sexe_display }}</div>
+    <div class="tags" style="margin-top:8px">
+      {% for a in patient.allergies %}<span class="badge b-err">⚠️ {{ a }}</span>{% endfor %}
+      {% for a in patient.antecedents %}<span class="badge b-teal">{{ a }}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+<div class="dgrid">
+  <div>
+    <div style="font-family:var(--fh);font-size:1.05rem;font-weight:700;margin-bottom:18px">📋 Mes consultations ({{ consultations|length }})</div>
+    {% for c in consultations %}
+    <div class="card" style="margin-bottom:14px;{% if forloop.first %}border-left:4px solid var(--teal){% endif %}">
+      {% if forloop.first %}<div style="font-size:.68rem;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:4px">Dernière visite</div>{% endif %}
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <div style="font-family:var(--fh);font-weight:700;font-size:.98rem">{{ c.motif }}</div>
+          <div style="font-size:.78rem;color:var(--slate)">📅 {{ c.date_consultation|date:"d/m/Y" }} · 👨‍⚕️ {% if c.medecin %}Dr. {{ c.medecin.prenom }} {{ c.medecin.nom }}{% else %}—{% endif %}</div>
+        </div>
+      </div>
+      <div style="background:var(--mist);border-radius:var(--rs);padding:13px;margin-bottom:10px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--slate);text-transform:uppercase;margin-bottom:6px">Ce que le médecin a constaté</div>
+        <div style="font-size:.88rem;font-weight:500;margin-bottom:3px">✅ {{ c.diagnostic|default:"—" }}</div>
+        <div style="font-size:.8rem;color:var(--slate)">{{ c.notes|default:"—" }}</div>
+      </div>
+      <div style="background:var(--teal-pale);border-radius:var(--rs);padding:11px;margin-bottom:9px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:3px">💊 Traitement prescrit</div>
+        <div style="font-size:.85rem;color:var(--navy)">{{ c.traitement|default:"—" }}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:var(--teal-pale);color:var(--teal);padding:3px 9px;border-radius:4px;font-size:.75rem;font-weight:600">TA: {{ c.ta|default:"—" }}</span>
+        <span style="background:var(--teal-pale);color:var(--teal);padding:3px 9px;border-radius:4px;font-size:.75rem;font-weight:600">SpO2: {{ c.spo2|default:"—" }}{% if c.spo2 %}%{% endif %}</span>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ic">📋</div><div class="empty-t">Aucune consultation enregistrée</div></div>
+    {% endfor %}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <div class="card-ttl" style="margin-bottom:14px">📅 Chronologie</div>
+      <div class="tl">
+        {% for c in consultations %}
+        <div class="tl-item">
+          <div class="tl-dot {% if not forloop.first %}b{% endif %}"></div>
+          <div class="tl-d">{{ c.date_consultation|date:"d/m/Y" }}</div>
+          <div class="tl-t">{{ c.motif }}</div>
+          <div class="tl-s">{{ c.diagnostic|default:"—" }}</div>
+        </div>
+        {% empty %}
+        <p style="color:var(--slate);font-size:.83rem">Aucune consultation.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

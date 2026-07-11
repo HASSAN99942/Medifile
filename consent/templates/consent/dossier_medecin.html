@@ -1,0 +1,83 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<button class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="location.href='{% url 'medical:medecin_patients' %}'">← Retour</button>
+
+<div style="background:var(--green);color:#fff;border-radius:var(--rs);padding:10px 16px;margin-bottom:14px;font-size:.83rem;display:flex;align-items:center;gap:8px">
+  ✅ <strong>Accès autorisé</strong> — dossier de {{ patient.user.prenom }} {{ patient.user.nom }}
+</div>
+
+<div class="ph">
+  <div class="av av-lg">{{ patient.user.prenom|slice:":1"|upper }}{{ patient.user.nom|slice:":1"|upper }}</div>
+  <div class="ph-info">
+    <div class="ph-name">{{ patient.user.prenom }} {{ patient.user.nom }}</div>
+    <div class="ph-id">N° MF : {{ patient.numero_mf }} · {{ patient.groupe_sanguin }} · {{ patient.age }} ans · {{ patient.get_sexe_display }}</div>
+    <div class="tags" style="margin-top:8px">
+      {% for a in patient.allergies %}<span class="badge b-err">⚠️ {{ a }}</span>{% endfor %}
+      {% for a in patient.antecedents %}<span class="badge b-teal">{{ a }}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="dgrid">
+  <div>
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-hdr"><div class="card-ttl">🩺 Ajouter une consultation</div></div>
+      <form method="post" action="{% url 'consent:ajouter_consultation' patient.pk %}">
+        {% csrf_token %}
+        <div class="fgrid" style="margin-bottom:13px">
+          <div class="fg"><label class="lbl">Tension (mmHg)</label><input class="fc" name="ta" placeholder="120/80"></div>
+          <div class="fg"><label class="lbl">SpO2 (%)</label><input class="fc" type="number" name="spo2" min="0" max="100" placeholder="98"></div>
+        </div>
+        <div class="fg" style="margin-bottom:13px"><label class="lbl">Motif *</label><input class="fc" name="motif" placeholder="Douleur, fièvre…"></div>
+        <div class="fg" style="margin-bottom:13px"><label class="lbl">Diagnostic</label><input class="fc" name="diagnostic" placeholder="Diagnostic principal"></div>
+        <div class="fg" style="margin-bottom:13px"><label class="lbl">Traitement prescrit</label><input class="fc" name="traitement" placeholder="Médicaments, posologie…"></div>
+        <div class="fg" style="margin-bottom:13px"><label class="lbl">Notes cliniques</label><textarea class="fc" name="notes" placeholder="Observations…"></textarea></div>
+        <button class="btn btn-p" type="submit">Enregistrer la consultation</button>
+      </form>
+    </div>
+
+    <div style="font-family:var(--fh);font-size:1.05rem;font-weight:700;margin-bottom:14px">🩺 Consultations ({{ consultations|length }})</div>
+    {% for c in consultations %}
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <div style="font-family:var(--fh);font-weight:700;font-size:.98rem">{{ c.motif }}</div>
+          <div style="font-size:.78rem;color:var(--slate)">{{ c.date_consultation|date:"d/m/Y H:i" }}{% if c.medecin %} · Dr. {{ c.medecin.prenom }} {{ c.medecin.nom }}{% endif %}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:var(--mist);padding:10px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700">Diagnostic</div><div style="font-size:.85rem;font-weight:500;margin-top:2px">{{ c.diagnostic|default:"—" }}</div></div>
+        <div style="background:var(--mist);padding:10px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700">Traitement</div><div style="font-size:.85rem;font-weight:500;margin-top:2px">{{ c.traitement|default:"—" }}</div></div>
+      </div>
+      {% if c.notes %}<div style="font-size:.8rem;color:var(--slate);border-left:3px solid var(--teal);padding-left:9px">{{ c.notes }}</div>{% endif %}
+      <div style="display:flex;gap:6px;margin-top:9px">
+        <span style="background:var(--teal-pale);color:var(--teal);padding:3px 8px;border-radius:4px;font-size:.75rem;font-weight:600">TA: {{ c.ta|default:"—" }}</span>
+        <span style="background:var(--teal-pale);color:var(--teal);padding:3px 8px;border-radius:4px;font-size:.75rem;font-weight:600">SpO2: {{ c.spo2|default:"—" }}{% if c.spo2 %}%{% endif %}</span>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ic">📋</div><div class="empty-t">Aucune consultation</div></div>
+    {% endfor %}
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-ttl" style="margin-bottom:13px">Informations patient</div>
+      <div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:10px">
+        <span style="font-size:.9rem;width:18px">🎂</span>
+        <div><div style="font-size:.68rem;color:var(--slate);font-weight:700;text-transform:uppercase">Naissance</div><div style="font-size:.85rem;font-weight:500">{{ patient.ddn|date:"d/m/Y" }} ({{ patient.age }} ans)</div></div>
+      </div>
+      <div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:10px">
+        <span style="font-size:.9rem;width:18px">🩸</span>
+        <div><div style="font-size:.68rem;color:var(--slate);font-weight:700;text-transform:uppercase">Groupe sanguin</div><div style="font-size:.85rem;font-weight:500">{{ patient.groupe_sanguin }}</div></div>
+      </div>
+      <div style="display:flex;gap:9px;align-items:flex-start">
+        <span style="font-size:.9rem;width:18px">🏷️</span>
+        <div><div style="font-size:.68rem;color:var(--slate);font-weight:700;text-transform:uppercase">N° MF</div><div style="font-size:.85rem;font-weight:500;font-family:monospace">{{ patient.numero_mf }}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

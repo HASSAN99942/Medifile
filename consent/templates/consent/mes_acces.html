@@ -1,0 +1,46 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div style="background:linear-gradient(135deg,var(--purple) 0%,#4a2080 100%);border-radius:var(--r);padding:24px 28px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden">
+  <div style="position:absolute;right:-10px;top:-10px;font-size:7rem;opacity:.08">🔐</div>
+  <div style="font-family:var(--fh);font-size:1.2rem;font-weight:800;margin-bottom:6px">Votre dossier vous appartient</div>
+  <div style="opacity:.8;font-size:.88rem;margin-bottom:16px;max-width:500px">
+    Vous contrôlez qui accède à vos informations médicales. Chaque accès est enregistré et visible ici.
+  </div>
+  <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="location.href='{% url 'consent:generer_code' %}'">🔢 Générer un code temporaire</button>
+</div>
+
+<div class="dg2">
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl">✅ Accès ({{ acces_list|length }})</div></div>
+    {% for a in acces_list %}
+    <div class="access-req {% if a.revoque %}denied{% else %}granted{% endif %}" style="margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:.9rem">Dr. {{ a.medecin.prenom }} {{ a.medecin.nom }}</div>
+          <div style="font-size:.72rem;color:var(--slate)">Accordé le {{ a.accorde_le|date:"d/m/Y H:i" }}</div>
+        </div>
+        {% if a.revoque %}<span class="badge b-err">Révoqué</span>
+        {% elif a.expire_le < maintenant %}<span class="badge b-gray">Expiré</span>
+        {% else %}<span class="badge b-ok">Expire le {{ a.expire_le|date:"d/m/Y H:i" }}</span>{% endif %}
+      </div>
+      <div style="font-size:.78rem;color:var(--slate);margin-bottom:10px">Source : {{ a.get_source_display }}</div>
+      {% if not a.revoque %}
+      <form method="post" action="{% url 'consent:revoquer_acces' a.pk %}" onsubmit="return confirm('Révoquer cet accès ? Le médecin ne pourra plus consulter votre dossier.')">
+        {% csrf_token %}
+        <button class="btn btn-d btn-sm" type="submit">🚫 Révoquer l'accès</button>
+      </form>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ic">🔓</div><div class="empty-t">Aucun accès accordé</div></div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl">📋 Journal d'audit</div><button class="btn btn-g btn-sm" onclick="location.href='{% url 'consent:journal' %}'">Voir tout</button></div>
+    <p style="font-size:.78rem;color:var(--slate)">Chaque consultation de votre dossier est enregistrée. Consultez le journal complet pour le détail.</p>
+  </div>
+</div>
+{% endblock %}

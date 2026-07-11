@@ -16,11 +16,25 @@ class AuditLog(models.Model):
         VALIDATION_MEDECIN = "VALIDATION_MEDECIN", _("Validation d'un compte médecin")
         SUSPENSION_MEDECIN = "SUSPENSION_MEDECIN", _("Suspension d'un compte médecin")
         CREATION_DOSSIER = "CREATION_DOSSIER", _("Création d'un dossier patient")
+        GENERATION_CODE = "GENERATION_CODE", _("Génération d'un code d'accès")
+        ACCES_ACCORDE = "ACCES_ACCORDE", _("Accès accordé")
+        CODE_ECHEC = "CODE_ECHEC", _("Échec de validation d'un code")
+        ACCES_DOSSIER = "ACCES_DOSSIER", _("Accès au dossier")
+        ACCES_REFUSE = "ACCES_REFUSE", _("Accès refusé")
+        REVOCATION_ACCES = "REVOCATION_ACCES", _("Révocation d'un accès")
 
     action = models.CharField(_("action"), max_length=30, choices=Action.choices)
     utilisateur = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name=_("utilisateur"),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="audit_logs",
+    )
+    patient_concerne = models.ForeignKey(
+        "medical.Patient",
+        verbose_name=_("patient concerné"),
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -40,7 +54,7 @@ class AuditLog(models.Model):
         return f"{self.horodatage:%Y-%m-%d %H:%M} — {self.get_action_display()}"
 
 
-def log_action(action, request=None, user=None, identifiant_saisi="", detail=""):
+def log_action(action, request=None, user=None, patient_concerne=None, identifiant_saisi="", detail=""):
     """Enregistre une entrée dans le journal d'audit."""
     adresse_ip = None
     if request is not None:
@@ -49,6 +63,7 @@ def log_action(action, request=None, user=None, identifiant_saisi="", detail="")
     return AuditLog.objects.create(
         action=action,
         utilisateur=user,
+        patient_concerne=patient_concerne,
         identifiant_saisi=identifiant_saisi,
         adresse_ip=adresse_ip,
         detail=detail,

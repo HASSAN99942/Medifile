@@ -1,0 +1,53 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<button class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="location.href='{% url 'medical:medecin_patients' %}'">← Retour</button>
+
+<div style="background:var(--white);border-radius:var(--r);padding:24px;border:1px solid var(--border);margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+  <div class="av av-lg" style="background:var(--slate);opacity:.6">{{ patient.user.prenom|slice:":1"|upper }}{{ patient.user.nom|slice:":1"|upper }}</div>
+  <div>
+    <div style="font-family:var(--fh);font-size:1.3rem;font-weight:800">{{ patient.user.prenom }} {{ patient.user.nom }}</div>
+    <div style="font-size:.8rem;color:var(--slate);margin-top:2px">
+      <span class="badge b-info">Dossier enregistré</span>
+    </div>
+    <div style="font-size:.78rem;color:var(--slate);margin-top:4px;font-style:italic">
+      ℹ️ Les informations détaillées nécessitent l'autorisation du patient.
+    </div>
+  </div>
+  <div style="margin-left:auto"><span class="badge b-warn">🔒 Accès restreint</span></div>
+</div>
+
+<div class="locked-dossier">
+  <div class="lock-icon">🔐</div>
+  <div class="lock-title">Dossier verrouillé</div>
+  <div class="lock-sub">
+    Le patient <strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong> doit vous communiquer son numéro MF et un code temporaire généré depuis son espace patient.
+  </div>
+
+  {% if erreur %}
+  <div style="background:rgba(229,62,62,.2);border:1px solid rgba(229,62,62,.4);border-radius:var(--rs);padding:12px;margin-bottom:16px;font-size:.85rem;max-width:340px;margin-left:auto;margin-right:auto">
+    ❌ {{ erreur }}
+  </div>
+  {% endif %}
+
+  <form method="post" style="max-width:340px;margin:0 auto">
+    {% csrf_token %}
+    <div class="fg" style="margin-bottom:10px;text-align:left">
+      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Numéro MF du patient</label>
+      <input name="numero_mf" class="fc" placeholder="MF-2026-000001" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff">
+    </div>
+    <div class="fg" style="margin-bottom:10px;text-align:left">
+      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Code temporaire</label>
+      <input name="code" class="fc" maxlength="6" placeholder="123456" style="letter-spacing:4px;font-size:1.3rem;font-weight:700;text-align:center;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    </div>
+    <button class="btn btn-p btn-full" type="submit">Valider</button>
+  </form>
+  <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:8px">Le code expire après 15 minutes.</div>
+</div>
+
+<div style="background:rgba(107,70,193,.08);border:1px solid rgba(107,70,193,.2);border-radius:var(--rs);padding:13px;margin-top:16px;font-size:.8rem;color:var(--purple)">
+  🔒 <strong>Conformité RGPD :</strong> Tout accès à ce dossier est journalisé et visible par le patient.
+</div>
+{% endblock %}
