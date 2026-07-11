@@ -7,19 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/main.css' %}">
+{% block extra_head %}{% endblock %}
 </head>
 <body>
 <button class="burger" id="burger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <div id="sidebar-wrap">{% block sidebar %}{% endblock %}</div>
-<div id="root">
-  <div class="main ani">
-    {% block topbar %}{% include "partials/topbar.html" %}{% endblock %}
-    <div class="content">
-      {% block content %}{% endblock %}
-    </div>
-  </div>
-</div>
+<div id="root">{% block root %}{% endblock %}</div>
 <div id="modal-wrap"></div>
 <div class="toasts" id="toasts"></div>
 <script src="{% static 'js/base.js' %}"></script>

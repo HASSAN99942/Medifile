@@ -12,7 +12,7 @@
     <button class="ni{% if active == 'a-hopital' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🏥</span>Mon établissement</button>
     <button class="ni{% if active == 'a-stats' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📊</span>Statistiques</button>
     <div class="s-sect" style="margin-top:10px">Compte</div>
-    <button class="ni" onclick="location.href='#'"><span class="ic">🚪</span>Déconnexion</button>
+    <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">
     <div class="u-chip">

@@ -13,7 +13,7 @@
     <button class="ni{% if active == 'd-results' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🧪</span>Résultats</button>
     <div class="s-sect" style="margin-top:10px">Compte</div>
     <button class="ni{% if active == 'd-settings' %} act{% endif %}" onclick="location.href='#'"><span class="ic">⚙️</span>Paramètres</button>
-    <button class="ni" onclick="location.href='#'"><span class="ic">🚪</span>Déconnexion</button>
+    <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">
     <div class="u-chip">

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block root %}
+  <div class="main ani">
+    {% block topbar %}{% include "partials/topbar.html" %}{% endblock %}
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}

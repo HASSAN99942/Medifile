@@ -34,3 +34,35 @@ class User(AbstractUser):
     def __str__(self):
         nom_complet = f"{self.prenom} {self.nom}".strip()
         return nom_complet or self.username
+
+
+class Etablissement(models.Model):
+    """Établissement unique (mono-établissement) — créé une seule fois à l'installation."""
+
+    nom = models.CharField(_("nom"), max_length=200)
+    ville = models.CharField(_("ville"), max_length=100, blank=True)
+    telephone = models.CharField(_("téléphone"), max_length=30, blank=True)
+    email = models.EmailField(_("adresse e-mail"), blank=True)
+    date_installation = models.DateTimeField(_("date d'installation"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("établissement")
+        verbose_name_plural = _("établissement")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise NotImplementedError("L'établissement ne peut pas être supprimé.")
+
+    @classmethod
+    def get(cls):
+        return cls.objects.first()
+
+    @classmethod
+    def est_installe(cls):
+        return cls.objects.exists()
+
+    def __str__(self):
+        return self.nom

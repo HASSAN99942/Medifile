@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Installation — MediFile{% endblock %}
+
+{% block root %}
+<div class="auth-wrap ani">
+  <div class="auth-brand">
+    <div class="logo-wrap"><div class="logo-icon" style="width:46px;height:46px;font-size:1.4rem">🩺</div><div class="logo-txt" style="font-size:1.5rem">Medi<span>File</span></div></div>
+    <h2 class="auth-tag">Bienvenue sur<br><span>MediFile</span></h2>
+    <p class="auth-desc">Configurez votre établissement et créez le compte administrateur. Cette étape ne peut être effectuée qu'une seule fois.</p>
+    <div style="margin-top:32px;position:relative;z-index:1">
+      <div style="font-size:.72rem;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;margin-bottom:12px">Comment ça marche ?</div>
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0">1</div>
+        <div><div style="color:#fff;font-weight:600;font-size:.88rem">Établissement</div><div style="color:rgba(255,255,255,.5);font-size:.78rem;margin-top:2px">Nom, ville, téléphone</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0">2</div>
+        <div><div style="color:#fff;font-weight:600;font-size:.88rem">Compte administrateur</div><div style="color:rgba(255,255,255,.5);font-size:.78rem;margin-top:2px">Vos identifiants de connexion</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0">3</div>
+        <div><div style="color:#fff;font-weight:600;font-size:.88rem">Comptes en cascade</div><div style="color:rgba(255,255,255,.5);font-size:.78rem;margin-top:2px">L'admin crée les médecins, qui créent les patients</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-side">
+    <div class="auth-box" style="max-width:460px">
+      <h1 class="auth-ttl">Installation de MediFile</h1>
+      <p class="auth-sub">Cette étape crée l'établissement et le 1ᵉʳ compte administrateur</p>
+
+      {% if errors %}
+      <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:16px">
+        {% for e in errors %}<div>❌ {{ e }}</div>{% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="auth-form">
+          <div style="font-size:.75rem;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.05em">🏥 Établissement</div>
+          <div class="fg">
+            <label class="lbl">Nom de l'établissement *</label>
+            <input class="fc" name="etab_nom" value="{{ data.etab_nom }}" placeholder="CHU Douala">
+          </div>
+          <div class="fgrid">
+            <div class="fg"><label class="lbl">Ville</label><input class="fc" name="etab_ville" value="{{ data.etab_ville }}" placeholder="Douala"></div>
+            <div class="fg"><label class="lbl">Téléphone</label><input class="fc" name="etab_telephone" value="{{ data.etab_telephone }}" placeholder="+237 6XX XXX XXX"></div>
+          </div>
+
+          <div style="font-size:.75rem;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-top:8px">👤 Compte administrateur</div>
+          <div class="fgrid">
+            <div class="fg"><label class="lbl">Prénom *</label><input class="fc" name="prenom" value="{{ data.prenom }}" placeholder="Jean"></div>
+            <div class="fg"><label class="lbl">Nom *</label><input class="fc" name="nom" value="{{ data.nom }}" placeholder="Mballa"></div>
+          </div>
+          <div class="fg">
+            <label class="lbl">Email *</label>
+            <div class="input-wrap"><span class="input-icon">📧</span><input class="fc" type="email" name="email" value="{{ data.email }}" placeholder="admin@etablissement.cm"></div>
+          </div>
+          <div class="fg">
+            <label class="lbl">Mot de passe *</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input class="fc fc-pass" type="password" id="i-pwd" name="password" placeholder="Min. 8 caractères" oninput="checkPwdStrength(this.value,'i-str','i-hint')">
+              <span class="toggle-pass" onclick="togglePwd('i-pwd',this)">👁️</span>
+            </div>
+            <div class="pbar" style="margin-top:4px"><div class="pfill" id="i-str" style="width:0;background:var(--red)"></div></div>
+            <span id="i-hint" style="font-size:.72rem;color:var(--slate)">Choisissez un mot de passe fort</span>
+          </div>
+          <div class="fg">
+            <label class="lbl">Confirmer le mot de passe *</label>
+            <input class="fc" type="password" name="password2" placeholder="Répétez le mot de passe">
+          </div>
+
+          <div style="background:var(--teal-pale);border-radius:var(--rs);padding:10px 13px;font-size:.78rem;color:var(--teal)">
+            🔒 Cette installation ne peut être effectuée qu'une seule fois.
+          </div>
+          <button class="btn btn-p btn-lg btn-full" type="submit">Installer MediFile →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/auth.js' %}"></script>{% endblock %}

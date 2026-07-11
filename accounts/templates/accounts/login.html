@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Connexion — MediFile{% endblock %}
+
+{% block root %}
+<div class="auth-wrap ani">
+  <div class="auth-brand">
+    <div class="logo-wrap"><div class="logo-icon" style="width:46px;height:46px;font-size:1.4rem">🩺</div><div class="logo-txt" style="font-size:1.5rem">Medi<span>File</span></div></div>
+    <h2 class="auth-tag">Le dossier patient<br><span>numérique</span> sécurisé</h2>
+    <p class="auth-desc">Accédez à l'historique médical complet de vos patients en toute sécurité. Données protégées, accès contrôlé par le patient.</p>
+    <div class="auth-feats">
+      <div class="auth-feat"><div class="auth-feat-ic">🔐</div>Consentement patient — accès contrôlé par code</div>
+      <div class="auth-feat"><div class="auth-feat-ic">⏱️</div>Accès temporaire — expire automatiquement</div>
+      <div class="auth-feat"><div class="auth-feat-ic">🔒</div>Chiffrement &amp; journaux d'audit complets</div>
+    </div>
+  </div>
+  <div class="auth-side">
+    <div class="auth-box">
+      <h1 class="auth-ttl">Connexion</h1>
+      <p class="auth-sub">Bienvenue sur MediFile — santé numérique sécurisée</p>
+
+      {% if error %}
+      <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:16px">
+        ❌ {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="role" id="role-input" value="medecin">
+        <div style="margin-bottom:18px">
+          <div style="font-size:.75rem;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Je me connecte en tant que</div>
+          <div class="role-sel">
+            <div class="role-c sel" id="rc-doc" onclick="selectLoginRole('medecin')"><div class="role-ic">👨‍⚕️</div><div class="role-lb">Médecin</div></div>
+            <div class="role-c" id="rc-pat" onclick="selectLoginRole('patient')"><div class="role-ic">🧑</div><div class="role-lb">Patient</div></div>
+          </div>
+          <div class="role-c" id="rc-adm" style="margin-top:8px;display:flex;align-items:center;gap:12px;padding:11px 14px" onclick="selectLoginRole('admin')">
+            <span style="font-size:1.3rem">🏥</span>
+            <div class="role-lb">Administrateur</div>
+          </div>
+        </div>
+
+        <div class="auth-form">
+          <div class="fg">
+            <label class="lbl">Email ou numéro MF</label>
+            <div class="input-wrap">
+              <span class="input-icon">📧</span>
+              <input class="fc" type="text" name="identifiant" value="{{ identifiant }}" placeholder="votre@email.cm ou MF-2026-000001" autofocus>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="lbl">Mot de passe</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input class="fc fc-pass" type="password" name="password" id="login-pwd" placeholder="••••••••">
+              <span class="toggle-pass" onclick="togglePwd('login-pwd',this)">👁️</span>
+            </div>
+          </div>
+          <button class="btn btn-p btn-lg btn-full" type="submit">Se connecter →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/auth.js' %}"></script>{% endblock %}

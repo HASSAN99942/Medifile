@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Changer le mot de passe — MediFile{% endblock %}
+
+{% block root %}
+<div class="auth-wrap ani">
+  <div class="auth-brand">
+    <div class="logo-wrap"><div class="logo-icon" style="width:46px;height:46px;font-size:1.4rem">🩺</div><div class="logo-txt" style="font-size:1.5rem">Medi<span>File</span></div></div>
+    <h2 class="auth-tag">Sécurisez<br><span>votre compte</span></h2>
+    <p class="auth-desc">
+      {% if force %}Un mot de passe provisoire vous a été attribué. Choisissez-en un nouveau avant de continuer.{% else %}Modifiez votre mot de passe à tout moment.{% endif %}
+    </p>
+  </div>
+  <div class="auth-side">
+    <div class="auth-box">
+      <h1 class="auth-ttl">Changer le mot de passe</h1>
+      <p class="auth-sub">
+        {% if force %}Mot de passe provisoire détecté — un changement est requis{% else %}Choisissez un nouveau mot de passe{% endif %}
+      </p>
+
+      {% if errors %}
+      <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:16px">
+        {% for e in errors %}<div>❌ {{ e }}</div>{% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="auth-form">
+          <div class="fg">
+            <label class="lbl">Mot de passe actuel</label>
+            <input class="fc" type="password" name="mdp_actuel" placeholder="••••••••">
+          </div>
+          <div class="fg">
+            <label class="lbl">Nouveau mot de passe</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input class="fc fc-pass" type="password" id="c-pwd" name="mdp_nouveau" placeholder="Min. 8 caractères" oninput="checkPwdStrength(this.value,'c-str','c-hint')">
+              <span class="toggle-pass" onclick="togglePwd('c-pwd',this)">👁️</span>
+            </div>
+            <div class="pbar" style="margin-top:4px"><div class="pfill" id="c-str" style="width:0;background:var(--red)"></div></div>
+            <span id="c-hint" style="font-size:.72rem;color:var(--slate)">Choisissez un mot de passe fort</span>
+          </div>
+          <div class="fg">
+            <label class="lbl">Confirmer le nouveau mot de passe</label>
+            <input class="fc" type="password" name="mdp_confirmation" placeholder="Répétez le mot de passe">
+          </div>
+          <button class="btn btn-p btn-lg btn-full" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/auth.js' %}"></script>{% endblock %}

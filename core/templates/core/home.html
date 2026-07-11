@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "dashboard_base.html" %}
 
-{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+{% block sidebar %}{% include sidebar_template %}{% endblock %}
 
 {% block content %}
 <p style="color:var(--slate);font-size:.88rem;margin-bottom:22px">
-  Bonjour, <strong>{{ nom_complet }}</strong> — page de test du socle Django
+  Bonjour, <strong>{{ nom_complet }}</strong>
   <span class="badge b-teal" style="margin-left:10px">🏥 {{ etablissement }}</span>
 </p>
 <div class="sgrid">
@@ -15,25 +15,15 @@
 </div>
 <div class="card">
   <div class="card-hdr">
-    <div class="card-ttl">✅ Socle Django opérationnel</div>
+    <div class="card-ttl">✅ Connexion sécurisée</div>
     <span class="badge b-ok">OK</span>
   </div>
   <p style="font-size:.88rem;color:var(--slate);margin-bottom:16px">
-    Templates Django + main.css du legacy (copié sans modification). Composants de référence :
+    Vous êtes connecté(e) en tant que <strong>{{ nom_complet }}</strong>. Chaque connexion est tracée dans le journal d'audit.
   </p>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-    <span class="badge b-ok">✅ b-ok</span>
-    <span class="badge b-warn">⚠️ b-warn</span>
-    <span class="badge b-err">❌ b-err</span>
-    <span class="badge b-info">ℹ️ b-info</span>
-    <span class="badge b-teal">b-teal</span>
-    <span class="badge b-purple">b-purple</span>
-  </div>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
-    <button class="btn btn-p" onclick="toast('Le socle fonctionne !','ok')">Bouton principal</button>
-    <button class="btn btn-s">Bouton secondaire</button>
-    <button class="btn btn-g">Bouton ghost</button>
-    <button class="btn btn-d btn-sm">Danger</button>
+    <button class="btn btn-s" onclick="location.href='{% url 'accounts:changer_mdp' %}'">🔑 Changer mot de passe</button>
+    <button class="btn btn-g" onclick="location.href='{% url 'accounts:logout' %}'">🚪 Déconnexion</button>
   </div>
 </div>
 {% endblock %}

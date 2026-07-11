@@ -16,7 +16,7 @@
     <div class="s-sect" style="margin-top:10px">Compte</div>
     <button class="ni{% if active == 'p-profil' %} act{% endif %}" onclick="location.href='#'"><span class="ic">👤</span>Mon profil</button>
     <button class="ni" onclick="showHelpModal&&showHelpModal()"><span class="ic">❓</span>Aide</button>
-    <button class="ni" onclick="location.href='#'"><span class="ic">🚪</span>Déconnexion</button>
+    <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">
     <div class="u-chip">
