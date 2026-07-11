@@ -1,0 +1,38 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+  <p style="color:var(--slate);font-size:.88rem">{{ patients|length }} patient(s)</p>
+  <button class="btn btn-p" onclick="location.href='{% url 'medical:medecin_patient_creer' %}'">➕ Nouveau patient</button>
+</div>
+<div class="card">
+  <div class="tw">
+    <table>
+      <thead><tr><th>Patient</th><th>Âge/Sexe</th><th>Groupe sanguin</th><th>Allergies</th><th>Créé le</th></tr></thead>
+      <tbody>
+        {% for p in patients %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="av" style="flex-shrink:0">{{ p.user.prenom|slice:":1"|upper }}{{ p.user.nom|slice:":1"|upper }}</div>
+              <div>
+                <div style="font-weight:600">{{ p.user.prenom }} {{ p.user.nom }}</div>
+                <div style="font-size:.72rem;color:var(--slate);font-family:monospace">{{ p.numero_mf }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ p.age }} ans / {{ p.get_sexe_display }}</td>
+          <td><span class="badge b-teal">{{ p.groupe_sanguin }}</span></td>
+          <td><div class="tags">{% for a in p.allergies|slice:":2" %}<span class="tag">{{ a }}</span>{% endfor %}{% if p.allergies|length > 2 %}<span class="tag">+{{ p.allergies|length|add:"-2" }}</span>{% endif %}</div></td>
+          <td style="font-size:.82rem">{{ p.date_creation|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5"><div class="empty"><div class="empty-ic">🔍</div><div class="empty-t">Aucun patient</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

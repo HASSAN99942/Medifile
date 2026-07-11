@@ -1,0 +1,45 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<button class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="location.href='{% url 'medical:medecin_patients' %}'">← Retour</button>
+<div class="card" style="max-width:600px">
+  <div class="card-hdr"><div class="card-ttl">➕ Nouveau patient</div></div>
+
+  {% if errors %}
+  <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:16px">
+    {% for e in errors %}<div>❌ {{ e }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="fgrid" style="margin-bottom:13px">
+      <div class="fg"><label class="lbl">Prénom *</label><input class="fc" name="prenom" value="{{ data.prenom }}" placeholder="Jean"></div>
+      <div class="fg"><label class="lbl">Nom *</label><input class="fc" name="nom" value="{{ data.nom }}" placeholder="Diallo"></div>
+      <div class="fg"><label class="lbl">Date de naissance *</label><input type="date" class="fc" name="ddn" value="{{ data.ddn }}"></div>
+      <div class="fg">
+        <label class="lbl">Sexe</label>
+        <select class="fc" name="sexe">
+          <option value="M" {% if data.sexe == "M" %}selected{% endif %}>Masculin</option>
+          <option value="F" {% if data.sexe == "F" %}selected{% endif %}>Féminin</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="lbl">Groupe sanguin</label>
+        <select class="fc" name="groupe_sanguin">
+          {% for g in groupes_sanguins %}<option {% if g == data.groupe_sanguin %}selected{% endif %}>{{ g }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Allergies (virgule)</label><input class="fc" name="allergies" value="{{ data.allergies }}" placeholder="Pénicilline, Latex…"></div>
+    <div class="fg"><label class="lbl">Antécédents (virgule)</label><textarea class="fc" name="antecedents" placeholder="Diabète, HTA…">{{ data.antecedents }}</textarea></div>
+    <div style="background:var(--teal-pale);border-radius:var(--rs);padding:10px 13px;font-size:.78rem;color:var(--teal);margin-top:12px">🔒 Un numéro MF et un mot de passe provisoire seront générés automatiquement.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button type="button" class="btn btn-g" onclick="location.href='{% url 'medical:medecin_patients' %}'">Annuler</button>
+      <button class="btn btn-p" type="submit">Créer le dossier</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

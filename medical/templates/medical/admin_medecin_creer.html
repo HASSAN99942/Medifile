@@ -1,0 +1,41 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<button class="btn btn-g btn-sm" style="margin-bottom:16px" onclick="location.href='{% url 'medical:admin_medecins' %}'">← Retour</button>
+<div class="card" style="max-width:640px">
+  <div class="card-hdr"><div class="card-ttl">+ Ajouter un médecin</div></div>
+  <div style="background:var(--teal-pale);border-radius:var(--rs);padding:11px 13px;font-size:.82rem;color:var(--teal);margin-bottom:16px">
+    Un compte est créé immédiatement avec un mot de passe provisoire. Le médecin devra le changer à sa première connexion.
+  </div>
+
+  {% if errors %}
+  <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:16px">
+    {% for e in errors %}<div>❌ {{ e }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="fgrid" style="margin-bottom:13px">
+      <div class="fg"><label class="lbl">Prénom *</label><input class="fc" name="prenom" value="{{ data.prenom }}" placeholder="Amara"></div>
+      <div class="fg"><label class="lbl">Nom *</label><input class="fc" name="nom" value="{{ data.nom }}" placeholder="Koné"></div>
+    </div>
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Email professionnel *</label><input type="email" class="fc" name="email" value="{{ data.email }}" placeholder="dr.kone@etablissement.cm"></div>
+    <div class="fgrid" style="margin-bottom:13px">
+      <div class="fg"><label class="lbl">Numéro d'ordre *</label><input class="fc" name="numero_ordre" value="{{ data.numero_ordre }}" placeholder="ORD-00123"></div>
+      <div class="fg">
+        <label class="lbl">Spécialité</label>
+        <select class="fc" name="specialite">
+          {% for s in specialites %}<option {% if s == data.specialite %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button type="button" class="btn btn-g" onclick="location.href='{% url 'medical:admin_medecins' %}'">Annuler</button>
+      <button class="btn btn-p" type="submit">Créer le compte</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

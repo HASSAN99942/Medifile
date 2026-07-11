@@ -1,0 +1,33 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;color:var(--slate);font-size:.88rem">{{ patients|length }} patient(s) inscrit(s)</div>
+<div class="card">
+  <div class="tw">
+    <table>
+      <thead><tr><th>Patient</th><th>N° MF</th><th>Âge/Sexe</th><th>Créé par</th><th>Statut compte</th><th>Inscrit le</th></tr></thead>
+      <tbody>
+        {% for p in patients %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="av" style="flex-shrink:0">{{ p.user.prenom|slice:":1"|upper }}{{ p.user.nom|slice:":1"|upper }}</div>
+              <div style="font-weight:600">{{ p.user.prenom }} {{ p.user.nom }}</div>
+            </div>
+          </td>
+          <td style="font-family:monospace;font-size:.82rem">{{ p.numero_mf }}</td>
+          <td>{{ p.age }} ans / {{ p.get_sexe_display }}</td>
+          <td style="font-size:.83rem">{% if p.cree_par %}Dr. {{ p.cree_par.prenom }} {{ p.cree_par.nom }}{% else %}—{% endif %}</td>
+          <td>{% if p.user.actif %}<span class="badge b-ok">Actif</span>{% else %}<span class="badge b-warn">Inactif</span>{% endif %}</td>
+          <td style="font-size:.82rem">{{ p.date_creation|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty"><div class="empty-ic">👥</div><div class="empty-t">Aucun patient inscrit</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

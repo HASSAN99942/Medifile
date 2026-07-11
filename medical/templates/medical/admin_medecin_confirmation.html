@@ -1,0 +1,28 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:560px">
+  {% if mot_de_passe %}
+  <div class="card-hdr"><div class="card-ttl">✅ Compte médecin créé</div><span class="badge b-ok">OK</span></div>
+  <p style="font-size:.88rem;color:var(--slate);margin-bottom:16px">
+    Le compte de <strong>Dr. {{ medecin.user.prenom }} {{ medecin.user.nom }}</strong> a été créé et est en attente de validation.
+  </p>
+  <div style="background:var(--teal-pale);border-radius:var(--rs);padding:16px;margin-bottom:16px">
+    <div style="font-weight:700;font-size:.88rem;color:var(--teal);margin-bottom:8px">🆔 Identifiants provisoires (à communiquer une seule fois)</div>
+    <div style="font-size:.83rem">Email : <strong>{{ medecin.user.email }}</strong></div>
+    <div style="font-size:.83rem;margin-top:4px">Mot de passe provisoire : <strong style="font-family:monospace">{{ mot_de_passe }}</strong></div>
+  </div>
+  <div style="background:#FFFBEB;border:1px solid #F6E05E;border-radius:var(--rs);padding:11px 13px;font-size:.8rem;color:#744210;margin-bottom:16px">
+    ⚠️ Ce mot de passe ne sera plus jamais affiché. Notez-le avant de quitter cette page.
+  </div>
+  {% else %}
+  <div class="card-hdr"><div class="card-ttl">Compte médecin</div></div>
+  <p style="font-size:.88rem;color:var(--slate);margin-bottom:16px">
+    Les identifiants provisoires de <strong>Dr. {{ medecin.user.prenom }} {{ medecin.user.nom }}</strong> ont déjà été affichés et ne peuvent plus être récupérés ici.
+  </p>
+  {% endif %}
+  <button class="btn btn-p" onclick="location.href='{% url 'medical:admin_medecins' %}'">Retour à la liste</button>
+</div>
+{% endblock %}

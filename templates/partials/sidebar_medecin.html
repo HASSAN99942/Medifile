@@ -7,7 +7,7 @@
   <nav class="s-nav">
     <div class="s-sect">Navigation</div>
     <button class="ni{% if active == 'd-home' %} act{% endif %}" onclick="location.href='{% url 'core:home' %}'"><span class="ic">🏠</span>Tableau de bord</button>
-    <button class="ni{% if active == 'd-patients' %} act{% endif %}" onclick="location.href='#'"><span class="ic">👥</span>Mes patients</button>
+    <button class="ni{% if active == 'd-patients' %} act{% endif %}" onclick="location.href='{% url 'medical:medecin_patients' %}'"><span class="ic">👥</span>Mes patients</button>
     <button class="ni{% if active == 'd-rdv' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📅</span>Rendez-vous</button>
     <button class="ni{% if active == 'd-ordos' %} act{% endif %}" onclick="location.href='#'"><span class="ic">💊</span>Ordonnances</button>
     <button class="ni{% if active == 'd-results' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🧪</span>Résultats</button>

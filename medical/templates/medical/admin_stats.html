@@ -1,0 +1,27 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<div class="sgrid" style="margin-bottom:24px">
+  <div class="scard sc-teal"><div class="s-lbl">Médecins actifs</div><div class="s-val">{{ nb_medecins_actifs }}</div><div class="s-sub">{% if nb_medecins_attente %}⏳ {{ nb_medecins_attente }} en attente{% endif %}</div><div class="s-ico">👨‍⚕️</div></div>
+  <div class="scard sc-gold"><div class="s-lbl">Patients inscrits</div><div class="s-val">{{ nb_patients }}</div><div class="s-sub">{{ nb_patients_actifs }} compte(s) actif(s)</div><div class="s-ico">👥</div></div>
+  <div class="scard sc-red"><div class="s-lbl">Médecins suspendus</div><div class="s-val">{{ nb_medecins_suspendus }}</div><div class="s-sub">Accès bloqué</div><div class="s-ico">🚫</div></div>
+  <div class="scard sc-purple"><div class="s-lbl">Journaux d'audit</div><div class="s-val">{{ nb_audit_total }}</div><div class="s-sub">Entrées totales</div><div class="s-ico">📋</div></div>
+</div>
+<div class="card">
+  <div class="card-ttl" style="margin-bottom:16px">📋 Journal d'audit récent</div>
+  {% for a in audit_recent %}
+  <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(209,232,229,.4)">
+    <span style="font-size:1rem;flex-shrink:0">👁️</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:.82rem">{{ a.get_action_display }}{% if a.utilisateur %} — {{ a.utilisateur }}{% endif %}</div>
+      <div style="font-size:.75rem;color:var(--slate)">{{ a.detail }}</div>
+      <div style="font-size:.7rem;color:var(--slate)">{{ a.horodatage|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="empty"><div class="empty-ic">📋</div><div class="empty-t">Aucune entrée</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

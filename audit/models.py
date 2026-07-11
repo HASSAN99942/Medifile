@@ -12,6 +12,10 @@ class AuditLog(models.Model):
         LOGOUT = "LOGOUT", _("Déconnexion")
         INSTALLATION = "INSTALLATION", _("Installation")
         CHANGEMENT_MDP = "CHANGEMENT_MDP", _("Changement de mot de passe")
+        CREATION_MEDECIN = "CREATION_MEDECIN", _("Création d'un compte médecin")
+        VALIDATION_MEDECIN = "VALIDATION_MEDECIN", _("Validation d'un compte médecin")
+        SUSPENSION_MEDECIN = "SUSPENSION_MEDECIN", _("Suspension d'un compte médecin")
+        CREATION_DOSSIER = "CREATION_DOSSIER", _("Création d'un dossier patient")
 
     action = models.CharField(_("action"), max_length=30, choices=Action.choices)
     utilisateur = models.ForeignKey(

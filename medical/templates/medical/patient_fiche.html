@@ -1,0 +1,44 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;margin:0 auto">
+  {% if mot_de_passe %}
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:2.2rem;margin-bottom:6px">🩺</div>
+    <div style="font-family:var(--fh);font-size:1.3rem;font-weight:800">Fiche d'accès patient</div>
+    <div style="color:var(--slate);font-size:.85rem">À imprimer et remettre au patient</div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:.85rem">
+    <div><strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong></div>
+    <div style="color:var(--slate)">{{ patient.date_creation|date:"d/m/Y" }}</div>
+  </div>
+
+  <div style="background:var(--teal-pale);border-radius:var(--rs);padding:18px;margin-bottom:16px">
+    <div style="font-weight:700;font-size:.88rem;color:var(--teal);margin-bottom:10px">🆔 Identifiants de connexion MediFile</div>
+    <div style="font-size:.9rem;margin-bottom:6px">Numéro patient (n° MF) : <strong style="font-family:monospace">{{ patient.numero_mf }}</strong></div>
+    <div style="font-size:.9rem">Mot de passe provisoire : <strong style="font-family:monospace">{{ mot_de_passe }}</strong></div>
+  </div>
+
+  <div style="background:#FFFBEB;border:1px solid #F6E05E;border-radius:var(--rs);padding:12px 14px;font-size:.8rem;color:#744210;margin-bottom:20px">
+    ⚠️ Ce mot de passe est provisoire et ne sera plus jamais affiché après cette page. Le patient devra en choisir un nouveau à sa première connexion.
+  </div>
+
+  <div style="display:flex;gap:10px;justify-content:center">
+    <button class="btn btn-p" onclick="window.print()">🖨️ Imprimer la fiche</button>
+    <button class="btn btn-g" onclick="location.href='{% url 'medical:medecin_patients' %}'">Retour aux patients</button>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:20px 0">
+    <div style="font-size:2.2rem;margin-bottom:10px">🔒</div>
+    <div class="card-ttl" style="margin-bottom:8px">Fiche déjà affichée</div>
+    <p style="color:var(--slate);font-size:.85rem;margin-bottom:16px">
+      Le mot de passe provisoire de <strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong> ({{ patient.numero_mf }}) a déjà été affiché une fois et ne peut plus être récupéré.
+    </p>
+    <button class="btn btn-p" onclick="location.href='{% url 'medical:medecin_patients' %}'">Retour aux patients</button>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+  <p style="color:var(--slate);font-size:.88rem">{{ medecins|length }} médecin(s) dans l'établissement</p>
+  <button class="btn btn-p" onclick="location.href='{% url 'medical:admin_medecin_creer' %}'">+ Ajouter un médecin</button>
+</div>
+<div class="card">
+  <div class="tw">
+    <table>
+      <thead><tr><th>Médecin</th><th>Spécialité</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for m in medecins %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="av" style="flex-shrink:0">{{ m.user.prenom|slice:":1"|upper }}{{ m.user.nom|slice:":1"|upper }}</div>
+              <div>
+                <div style="font-weight:600">Dr. {{ m.user.prenom }} {{ m.user.nom }}</div>
+                <div style="font-size:.72rem;color:var(--slate);font-family:monospace">{{ m.numero_ordre }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ m.specialite }}</td>
+          <td style="font-size:.82rem">
+            <div>{{ m.user.email }}</div>
+          </td>
+          <td>
+            {% if m.statut == "en_attente" %}<span class="badge b-warn">⏳ En attente</span>
+            {% elif m.statut == "actif" %}<span class="badge b-ok">✅ Actif</span>
+            {% else %}<span class="badge b-err">🚫 Suspendu</span>{% endif %}
+          </td>
+          <td>
+            <div class="tact">
+              {% if m.statut == "en_attente" %}
+              <form method="post" action="{% url 'medical:admin_medecin_valider' m.pk %}" onsubmit="return confirm('Valider ce compte médecin ?')">
+                {% csrf_token %}
+                <button class="btn btn-green btn-sm" type="submit">✅ Valider</button>
+              </form>
+              {% elif m.statut == "actif" %}
+              <form method="post" action="{% url 'medical:admin_medecin_suspendre' m.pk %}" onsubmit="return confirm('Suspendre l\'accès de ce médecin ?')">
+                {% csrf_token %}
+                <button class="btn btn-d btn-sm" type="submit">🚫 Suspendre</button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'medical:admin_medecin_valider' m.pk %}" onsubmit="return confirm('Réactiver ce compte médecin ?')">
+                {% csrf_token %}
+                <button class="btn btn-green btn-sm" type="submit">✅ Réactiver</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5"><div class="empty"><div class="empty-ic">👨‍⚕️</div><div class="empty-t">Aucun médecin</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
