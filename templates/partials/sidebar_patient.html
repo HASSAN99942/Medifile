@@ -1,0 +1,27 @@
+{% load i18n %}
+<aside class="sidebar" id="sidebar" style="background:linear-gradient(180deg,#0D1F3C 0%,#0a2d27 100%)">
+  <div class="s-logo">
+    <div class="logo-wrap"><div class="logo-icon">🩺</div><div class="logo-txt">Medi<span>File</span></div></div>
+    <div class="s-role-tag">Espace Patient</div>
+  </div>
+  <nav class="s-nav">
+    <div class="s-sect">Navigation</div>
+    <button class="ni{% if active == 'p-home' %} act{% endif %}" onclick="location.href='{% url 'core:home' %}'"><span class="ic">🏠</span>Mon tableau de bord</button>
+    <button class="ni{% if active == 'p-histo' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📋</span>Mon historique</button>
+    <button class="ni{% if active == 'p-ordos' %} act{% endif %}" onclick="location.href='#'"><span class="ic">💊</span>Mes ordonnances</button>
+    <button class="ni{% if active == 'p-results' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🧪</span>Mes résultats</button>
+    <button class="ni{% if active == 'p-rdv' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📅</span>Mes rendez-vous</button>
+    <button class="ni{% if active == 'p-docs' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📄</span>Mes documents</button>
+    <button class="ni{% if active == 'p-acces' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🔐</span>Accès &amp; Consentements{% if nb_demandes %}<span class="nb">{{ nb_demandes }}</span>{% endif %}</button>
+    <div class="s-sect" style="margin-top:10px">Compte</div>
+    <button class="ni{% if active == 'p-profil' %} act{% endif %}" onclick="location.href='#'"><span class="ic">👤</span>Mon profil</button>
+    <button class="ni" onclick="showHelpModal&&showHelpModal()"><span class="ic">❓</span>Aide</button>
+    <button class="ni" onclick="location.href='#'"><span class="ic">🚪</span>Déconnexion</button>
+  </nav>
+  <div class="s-foot">
+    <div class="u-chip">
+      <div class="av" style="background:var(--gold)">{{ avatar|default:"PT" }}</div>
+      <div><div class="u-name">{{ nom_complet|default:"Patient" }}</div><div class="u-role">Patient · {{ etablissement|default:"—" }}</div></div>
+    </div>
+  </div>
+</aside>

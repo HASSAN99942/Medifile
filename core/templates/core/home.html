@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<p style="color:var(--slate);font-size:.88rem;margin-bottom:22px">
+  Bonjour, <strong>{{ nom_complet }}</strong> — page de test du socle Django
+  <span class="badge b-teal" style="margin-left:10px">🏥 {{ etablissement }}</span>
+</p>
+<div class="sgrid">
+  <div class="scard sc-teal"><div class="s-lbl">Mes patients</div><div class="s-val">0</div><div class="s-sub">Suivis actifs</div><div class="s-ico">👥</div></div>
+  <div class="scard sc-gold"><div class="s-lbl">RDV aujourd'hui</div><div class="s-val">0</div><div class="s-sub">Premier à —</div><div class="s-ico">📅</div></div>
+  <div class="scard sc-green"><div class="s-lbl">Cas critiques</div><div class="s-val">0</div><div class="s-sub">Aucun urgent</div><div class="s-ico">🚨</div></div>
+  <div class="scard sc-blue"><div class="s-lbl">Surveillance</div><div class="s-val">0</div><div class="s-sub">Suivi rapproché</div><div class="s-ico">👁️</div></div>
+</div>
+<div class="card">
+  <div class="card-hdr">
+    <div class="card-ttl">✅ Socle Django opérationnel</div>
+    <span class="badge b-ok">OK</span>
+  </div>
+  <p style="font-size:.88rem;color:var(--slate);margin-bottom:16px">
+    Templates Django + main.css du legacy (copié sans modification). Composants de référence :
+  </p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <span class="badge b-ok">✅ b-ok</span>
+    <span class="badge b-warn">⚠️ b-warn</span>
+    <span class="badge b-err">❌ b-err</span>
+    <span class="badge b-info">ℹ️ b-info</span>
+    <span class="badge b-teal">b-teal</span>
+    <span class="badge b-purple">b-purple</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    <button class="btn btn-p" onclick="toast('Le socle fonctionne !','ok')">Bouton principal</button>
+    <button class="btn btn-s">Bouton secondaire</button>
+    <button class="btn btn-g">Bouton ghost</button>
+    <button class="btn btn-d btn-sm">Danger</button>
+  </div>
+</div>
+{% endblock %}

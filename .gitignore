@@ -1,0 +1,16 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+db.sqlite3
+*.log
+staticfiles/
+
+# Ancien frontend abandonné (artefacts verrouillés)
+frontend/
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

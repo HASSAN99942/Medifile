@@ -1,0 +1,8 @@
+<header class="topbar">
+  <div class="tb-l"><h1 class="pg-ttl">{{ page_title|default:"MediFile" }}</h1></div>
+  <div class="tb-r">
+    {% if not hide_search %}<div class="srch"><span>🔍</span><input type="text" placeholder="Rechercher…"></div>{% endif %}
+    <div class="ibtn" title="Notifications">🔔<span class="ndot"></span></div>
+    <div class="ibtn">👤</div>
+  </div>
+</header>

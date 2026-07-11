@@ -1,0 +1,24 @@
+{% load i18n %}
+<aside class="sidebar" id="sidebar" style="background:linear-gradient(180deg,#0D1F3C 0%,#0a2a22 100%)">
+  <div class="s-logo">
+    <div class="logo-wrap"><div class="logo-icon">🩺</div><div class="logo-txt">Medi<span>File</span></div></div>
+    <div class="s-role-tag">Espace Médecin · {{ etablissement|default:"—" }}</div>
+  </div>
+  <nav class="s-nav">
+    <div class="s-sect">Navigation</div>
+    <button class="ni{% if active == 'd-home' %} act{% endif %}" onclick="location.href='{% url 'core:home' %}'"><span class="ic">🏠</span>Tableau de bord</button>
+    <button class="ni{% if active == 'd-patients' %} act{% endif %}" onclick="location.href='#'"><span class="ic">👥</span>Mes patients</button>
+    <button class="ni{% if active == 'd-rdv' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📅</span>Rendez-vous</button>
+    <button class="ni{% if active == 'd-ordos' %} act{% endif %}" onclick="location.href='#'"><span class="ic">💊</span>Ordonnances</button>
+    <button class="ni{% if active == 'd-results' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🧪</span>Résultats</button>
+    <div class="s-sect" style="margin-top:10px">Compte</div>
+    <button class="ni{% if active == 'd-settings' %} act{% endif %}" onclick="location.href='#'"><span class="ic">⚙️</span>Paramètres</button>
+    <button class="ni" onclick="location.href='#'"><span class="ic">🚪</span>Déconnexion</button>
+  </nav>
+  <div class="s-foot">
+    <div class="u-chip">
+      <div class="av">{{ avatar|default:"MD" }}</div>
+      <div><div class="u-name">{{ nom_complet|default:"Médecin" }}</div><div class="u-role">{{ specialite|default:"—" }}</div></div>
+    </div>
+  </div>
+</aside>
