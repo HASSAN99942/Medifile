@@ -683,3 +683,59 @@ class OrdonnancePatientTests(TestCase):
         OrdonnanceLigne.objects.create(ordonnance=ordonnance, medicament="SecretMed", dosage="")
         response = self.client.get(reverse("consent:mes_ordonnances"))
         self.assertNotContains(response, "SecretMed")
+
+
+class MedecinOrdonnancesListeTests(TestCase):
+    """Page « Ordonnances » du médecin : liste scopée aux patients accessibles."""
+
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def _creer_ordonnance(self, patient, medicament="Paracétamol"):
+        ordonnance = Ordonnance.objects.create(
+            patient=patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() + datetime.timedelta(days=30),
+        )
+        OrdonnanceLigne.objects.create(ordonnance=ordonnance, medicament=medicament)
+        return ordonnance
+
+    def test_page_accessible(self):
+        response = self.client.get(reverse("consent:medecin_ordonnances"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_liste_ordonnances_dun_patient_accessible(self):
+        Acces.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() + datetime.timedelta(hours=48),
+        )
+        self._creer_ordonnance(self.patient, medicament="Amoxicilline")
+        response = self.client.get(reverse("consent:medecin_ordonnances"))
+        self.assertContains(response, "Amoxicilline")
+
+    def test_ordonnance_dun_patient_non_accessible_cachee(self):
+        # ordonnance existante mais aucun accès valide → ne doit pas apparaître
+        self._creer_ordonnance(self.patient, medicament="SecretMed")
+        response = self.client.get(reverse("consent:medecin_ordonnances"))
+        self.assertNotContains(response, "SecretMed")
+
+    def test_acces_expire_masque_les_ordonnances(self):
+        Acces.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() - datetime.timedelta(minutes=1),
+        )
+        self._creer_ordonnance(self.patient, medicament="ExpiredAccessMed")
+        response = self.client.get(reverse("consent:medecin_ordonnances"))
+        self.assertNotContains(response, "ExpiredAccessMed")
+
+    def test_patient_ne_peut_pas_acceder(self):
+        self.client.logout()
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+        response = self.client.get(reverse("consent:medecin_ordonnances"))
+        self.assertEqual(response.status_code, 403)

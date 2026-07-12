@@ -1,0 +1,31 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+  <p style="color:var(--slate);font-size:.88rem">{{ ordonnances|length }} ordonnance(s)</p>
+  <button class="btn btn-p" onclick="location.href='{% url 'medical:medecin_patients' %}'">💊 Nouvelle ordonnance</button>
+</div>
+<div class="card">
+  <div class="tw">
+    <table>
+      <thead><tr><th>Réf.</th><th>Patient</th><th>Date</th><th>Médicaments</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+        {% for o in ordonnances %}
+        <tr>
+          <td style="font-family:monospace;font-size:.8rem">{{ o.reference }}</td>
+          <td><strong>{{ o.patient.user.prenom }} {{ o.patient.user.nom }}</strong></td>
+          <td style="font-size:.83rem">{{ o.date|date:"d/m/Y" }}</td>
+          <td style="font-size:.8rem;color:var(--slate)">{% for l in o.lignes.all %}{{ l.medicament }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td>{% if o.est_active %}<span class="badge b-ok">✅ Active</span>{% else %}<span class="badge b-gray">Expirée</span>{% endif %}</td>
+          <td><div class="tact"><button class="btn btn-g btn-sm" onclick="location.href='{% url 'consent:dossier_medecin' o.patient.pk %}'">Dossier</button></div></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty"><div class="empty-ic">💊</div><div class="empty-t">Aucune ordonnance</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

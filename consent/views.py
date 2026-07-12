@@ -141,6 +141,26 @@ def mes_ordonnances(request):
 
 
 @role_required("medecin")
+def medecin_ordonnances(request):
+    # Scopé aux patients auxquels le médecin a un accès valide en ce moment
+    # (vérifié à chaque requête, comme la règle de consentement).
+    patients_accessibles = Acces.objects.filter(
+        medecin=request.user, revoque=False, expire_le__gt=timezone.now()
+    ).values_list("patient_id", flat=True)
+    ordonnances = (
+        Ordonnance.objects.select_related("patient__user", "medecin")
+        .prefetch_related("lignes")
+        .filter(patient_id__in=patients_accessibles)
+        .order_by("-date", "-id")
+    )
+    return render(
+        request,
+        "consent/medecin_ordonnances.html",
+        {"page_title": "Ordonnances", "active": "d-ordos", "ordonnances": ordonnances},
+    )
+
+
+@role_required("medecin")
 def dossier_verrouille(request, pk):
     patient = get_object_or_404(Patient.objects.select_related("user"), pk=pk)
     if a_acces_valide(patient, request.user):

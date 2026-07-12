@@ -12,6 +12,7 @@ urlpatterns = [
     path("mes-acces/<int:pk>/refuser/", views.refuser_demande, name="refuser_demande"),
     path("mes-acces/<int:pk>/revoquer/", views.revoquer_acces, name="revoquer_acces"),
     path("journal/", views.journal, name="journal"),
+    path("ordonnances/", views.medecin_ordonnances, name="medecin_ordonnances"),
     path("dossier/<int:pk>/", views.dossier_medecin, name="dossier_medecin"),
     path("dossier/<int:pk>/verrouille/", views.dossier_verrouille, name="dossier_verrouille"),
     path("dossier/<int:pk>/consultation/", views.ajouter_consultation, name="ajouter_consultation"),
