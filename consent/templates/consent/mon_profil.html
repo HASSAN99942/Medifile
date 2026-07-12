@@ -1,0 +1,58 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width:680px">
+  <div class="card" style="margin-bottom:18px;text-align:center;padding:32px">
+    <div class="av av-lg" style="background:var(--gold);margin:0 auto 14px;width:72px;height:72px;font-size:1.6rem;border-radius:18px">{{ patient.user.prenom|slice:":1"|upper }}{{ patient.user.nom|slice:":1"|upper }}</div>
+    <div style="font-family:var(--fh);font-size:1.4rem;font-weight:800">{{ patient.user.prenom }} {{ patient.user.nom }}</div>
+    <div style="color:var(--slate);font-size:.85rem;margin-top:3px">Patient · N° {{ patient.numero_mf }}</div>
+    <div style="margin-top:11px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
+      <span class="badge b-teal">🩸 {{ patient.groupe_sanguin }}</span><span class="badge b-info">{{ patient.age }} ans</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-ttl" style="margin-bottom:14px">👤 Informations personnelles</div>
+    <div class="fgrid">
+      <div class="fg"><label class="lbl">Prénom</label><input class="fc" value="{{ patient.user.prenom }}" readonly style="background:var(--mist)"></div>
+      <div class="fg"><label class="lbl">Nom</label><input class="fc" value="{{ patient.user.nom }}" readonly style="background:var(--mist)"></div>
+      <div class="fg"><label class="lbl">Date de naissance</label><input class="fc" value="{{ patient.ddn|date:'d/m/Y' }}" readonly style="background:var(--mist)"></div>
+      <div class="fg"><label class="lbl">Sexe</label><input class="fc" value="{{ patient.get_sexe_display }}" readonly style="background:var(--mist)"></div>
+      <div class="fg"><label class="lbl">Email</label><input class="fc" value="{{ patient.user.email|default:'—' }}" readonly style="background:var(--mist)"></div>
+      <div class="fg"><label class="lbl">N° MF (identifiant)</label><input class="fc" value="{{ patient.numero_mf }}" readonly style="background:var(--mist);font-family:monospace"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-ttl" style="margin-bottom:14px">🏥 Informations médicales</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">🩸 Groupe sanguin</div><div style="font-weight:600;font-size:.85rem">{{ patient.groupe_sanguin }}</div></div>
+      <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">🎂 Âge</div><div style="font-weight:600;font-size:.85rem">{{ patient.age }} ans</div></div>
+      <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">👨‍⚕️ Créé par</div><div style="font-weight:600;font-size:.85rem">{% if patient.cree_par %}Dr. {{ patient.cree_par.prenom }} {{ patient.cree_par.nom }}{% else %}—{% endif %}</div></div>
+      <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">🏥 Établissement</div><div style="font-weight:600;font-size:.85rem">{{ etablissement.nom|default:"—" }}</div></div>
+      <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">🗓️ Dossier créé le</div><div style="font-weight:600;font-size:.85rem">{{ patient.date_creation|date:"d/m/Y" }}</div></div>
+    </div>
+    {% if patient.allergies %}
+    <div style="margin-top:12px;padding:11px;background:#FFF5F5;border-radius:var(--rs)">
+      <div style="font-size:.7rem;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:5px">⚠️ Mes allergies</div>
+      <div class="tags">{% for a in patient.allergies %}<span class="badge b-err">{{ a }}</span>{% endfor %}</div>
+    </div>
+    {% endif %}
+    {% if patient.antecedents %}
+    <div style="margin-top:10px;padding:11px;background:var(--teal-pale);border-radius:var(--rs)">
+      <div style="font-size:.7rem;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:5px">📋 Mes antécédents</div>
+      <div class="tags">{% for a in patient.antecedents %}<span class="badge b-teal">{{ a }}</span>{% endfor %}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-ttl" style="margin-bottom:10px">🔒 Confidentialité & Consentements</div>
+    <p style="font-size:.83rem;color:var(--slate);margin-bottom:12px">Vous gérez qui accède à votre dossier depuis la page dédiée : approuver ou refuser les demandes des médecins, voir les accès actifs et les révoquer à tout moment.</p>
+    <button class="btn btn-p btn-sm" onclick="location.href='{% url 'consent:mes_acces' %}'">🔐 Gérer mes accès</button>
+    <p style="font-size:.73rem;color:var(--slate);margin-top:12px">🔐 Données protégées · lecture seule sur le contenu médical.</p>
+  </div>
+</div>
+{% endblock %}

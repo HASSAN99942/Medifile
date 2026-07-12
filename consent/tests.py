@@ -923,3 +923,41 @@ class RendezVousPatientTests(TestCase):
         )
         response = self.client.get(reverse("consent:mes_rdv"))
         self.assertNotContains(response, "RdvSecret")
+
+
+class ProfilPatientTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+
+    def test_profil_affiche_infos_en_lecture_seule(self):
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+        response = self.client.get(reverse("consent:mon_profil"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Jean")
+        self.assertContains(response, "Diallo")
+        self.assertContains(response, self.patient.numero_mf)
+        self.assertNotContains(response, "<form")
+
+    def test_medecin_ne_peut_pas_acceder(self):
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+        response = self.client.get(reverse("consent:mon_profil"))
+        self.assertEqual(response.status_code, 403)
+
+
+class DocumentsPatientTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+
+    def test_documents_affiche_etat_vide(self):
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+        response = self.client.get(reverse("consent:mes_documents"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Aucun document")
+        self.assertNotContains(response, "<form")
+
+    def test_medecin_ne_peut_pas_acceder(self):
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+        response = self.client.get(reverse("consent:mes_documents"))
+        self.assertEqual(response.status_code, 403)

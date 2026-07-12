@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import role_required
+from accounts.models import Etablissement
 from audit.models import AuditLog, log_action
 from medical.models import Ordonnance, OrdonnanceLigne, Patient, RendezVous, Resultat
 
@@ -165,6 +166,32 @@ def mes_rdv(request):
         request,
         "consent/mes_rdv.html",
         {"page_title": "Mes rendez-vous", "active": "p-rdv", "rdvs": rdvs},
+    )
+
+
+@role_required("patient")
+def mon_profil(request):
+    patient = request.user.patient
+    return render(
+        request,
+        "consent/mon_profil.html",
+        {
+            "page_title": "Mon profil",
+            "active": "p-profil",
+            "patient": patient,
+            "etablissement": Etablissement.get(),
+        },
+    )
+
+
+@role_required("patient")
+def mes_documents(request):
+    # Aucun document pour l'instant : l'upload de fichiers (modèle Document + stockage)
+    # est une étape ultérieure. La page reproduit l'état vide de legacy/js/patient.js (pDocs).
+    return render(
+        request,
+        "consent/mes_documents.html",
+        {"page_title": "Mes documents médicaux", "active": "p-docs", "documents": []},
     )
 
 
