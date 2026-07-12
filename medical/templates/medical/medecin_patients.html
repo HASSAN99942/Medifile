@@ -4,9 +4,13 @@
 
 {% block content %}
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-  <p style="color:var(--slate);font-size:.88rem">{{ patients|length }} patient(s)</p>
+  <form method="get" class="srch" style="display:flex">
+    <span>🔍</span>
+    <input type="text" name="q" placeholder="Nom du patient…" value="{{ q }}" style="width:220px">
+  </form>
   <button class="btn btn-p" onclick="location.href='{% url 'medical:medecin_patient_creer' %}'">➕ Nouveau patient</button>
 </div>
+<p style="color:var(--slate);font-size:.88rem;margin-bottom:14px">{{ patients|length }} patient(s){% if q %} — résultats pour « {{ q }} »{% endif %}</p>
 <div class="card">
   <div class="tw">
     <table>
@@ -29,7 +33,7 @@
           <td onclick="event.stopPropagation()">
             <div class="tact">
               <button class="btn {% if p.a_acces %}btn-s{% else %}btn-purple{% endif %} btn-sm" onclick="location.href='{% url 'consent:dossier_medecin' p.pk %}'">
-                {% if p.a_acces %}Dossier{% else %}Saisir un code{% endif %}
+                {% if p.a_acces %}Dossier{% else %}Demander l'accès{% endif %}
               </button>
             </div>
           </td>

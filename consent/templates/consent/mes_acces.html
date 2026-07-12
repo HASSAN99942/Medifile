@@ -6,11 +6,42 @@
 <div style="background:linear-gradient(135deg,var(--purple) 0%,#4a2080 100%);border-radius:var(--r);padding:24px 28px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden">
   <div style="position:absolute;right:-10px;top:-10px;font-size:7rem;opacity:.08">🔐</div>
   <div style="font-family:var(--fh);font-size:1.2rem;font-weight:800;margin-bottom:6px">Votre dossier vous appartient</div>
-  <div style="opacity:.8;font-size:.88rem;margin-bottom:16px;max-width:500px">
+  <div style="opacity:.8;font-size:.88rem;max-width:500px">
     Vous contrôlez qui accède à vos informations médicales. Chaque accès est enregistré et visible ici.
   </div>
-  <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="location.href='{% url 'consent:generer_code' %}'">🔢 Générer un code temporaire</button>
 </div>
+
+{% if demandes_en_attente %}
+<div class="card" style="margin-bottom:20px;border-left:4px solid var(--orange)">
+  <div class="card-hdr">
+    <div class="card-ttl">⏳ Demandes d'accès en attente ({{ demandes_en_attente|length }})</div>
+  </div>
+  {% for d in demandes_en_attente %}
+  <div class="access-req pending">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-weight:700;font-size:.95rem">Dr. {{ d.medecin.prenom }} {{ d.medecin.nom }}</div>
+        <div style="font-size:.78rem;color:var(--slate);margin-top:2px">📅 Demandé le {{ d.cree_le|date:"d/m/Y H:i" }}</div>
+      </div>
+      <span class="badge b-warn">En attente</span>
+    </div>
+    <div style="background:rgba(214,158,46,.1);border-radius:var(--rx);padding:10px;margin-bottom:12px;font-size:.82rem">
+      <strong>Motif :</strong> {{ d.get_motif_display }} · <strong>Durée :</strong> {{ d.get_duree_heures_display }}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <form method="post" action="{% url 'consent:approuver_demande' d.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-green" type="submit">✅ Approuver</button>
+      </form>
+      <form method="post" action="{% url 'consent:refuser_demande' d.pk %}" onsubmit="return confirm('Refuser cette demande d\'accès ?')">
+        {% csrf_token %}
+        <button class="btn btn-d btn-sm" type="submit">❌ Refuser</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 <div class="dg2">
   <div class="card">

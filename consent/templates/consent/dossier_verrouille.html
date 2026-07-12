@@ -22,29 +22,42 @@
 <div class="locked-dossier">
   <div class="lock-icon">🔐</div>
   <div class="lock-title">Dossier verrouillé</div>
+
+  {% if demande_en_attente %}
   <div class="lock-sub">
-    Le patient <strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong> doit vous communiquer son numéro MF et un code temporaire généré depuis son espace patient.
+    Votre demande d'accès à <strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong> est en attente de validation par le patient.
+  </div>
+  <div style="background:rgba(200,134,42,.2);border:1px solid rgba(200,134,42,.4);border-radius:var(--rs);padding:13px;font-size:.83rem;max-width:340px;margin:0 auto">
+    ⏳ Demande envoyée le {{ demande_en_attente.cree_le|date:"d/m/Y H:i" }} — {{ demande_en_attente.get_motif_display }}, {{ demande_en_attente.get_duree_heures_display }}.
+  </div>
+  {% else %}
+  <div class="lock-sub">
+    Le patient <strong>{{ patient.user.prenom }} {{ patient.user.nom }}</strong> doit autoriser l'accès à son dossier. Envoyez-lui une demande.
   </div>
 
-  {% if erreur %}
+  {% if erreurs %}
   <div style="background:rgba(229,62,62,.2);border:1px solid rgba(229,62,62,.4);border-radius:var(--rs);padding:12px;margin-bottom:16px;font-size:.85rem;max-width:340px;margin-left:auto;margin-right:auto">
-    ❌ {{ erreur }}
+    {% for e in erreurs %}<div>❌ {{ e }}</div>{% endfor %}
   </div>
   {% endif %}
 
-  <form method="post" style="max-width:340px;margin:0 auto">
+  <form method="post" style="max-width:340px;margin:0 auto;text-align:left">
     {% csrf_token %}
-    <div class="fg" style="margin-bottom:10px;text-align:left">
-      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Numéro MF du patient</label>
-      <input name="numero_mf" class="fc" placeholder="MF-2026-000001" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff">
+    <div class="fg" style="margin-bottom:10px">
+      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Motif de la demande</label>
+      <select name="motif" class="fc" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff">
+        {% for valeur, label in motifs %}<option value="{{ valeur }}" style="color:var(--navy)">{{ label }}</option>{% endfor %}
+      </select>
     </div>
-    <div class="fg" style="margin-bottom:10px;text-align:left">
-      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Code temporaire</label>
-      <input name="code" class="fc" maxlength="6" placeholder="123456" style="letter-spacing:4px;font-size:1.3rem;font-weight:700;text-align:center;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Durée d'accès souhaitée</label>
+      <select name="duree_heures" class="fc" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff">
+        {% for valeur, label in durees %}<option value="{{ valeur }}" style="color:var(--navy)" {% if valeur == 48 %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
     </div>
-    <button class="btn btn-p btn-full" type="submit">Valider</button>
+    <button class="btn btn-gold btn-full" type="submit">📨 Envoyer la demande</button>
   </form>
-  <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:8px">Le code expire après 15 minutes.</div>
+  {% endif %}
 </div>
 
 <div style="background:rgba(107,70,193,.08);border:1px solid rgba(107,70,193,.2);border-radius:var(--rs);padding:13px;margin-top:16px;font-size:.8rem;color:var(--purple)">

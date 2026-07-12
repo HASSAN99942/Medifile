@@ -12,34 +12,42 @@ DUREE_CHOICES = [
 ]
 
 
-class CodeAutorisation(models.Model):
-    """Code temporaire à 6 chiffres généré par le patient. Jamais stocké en clair."""
+class DemandeAcces(models.Model):
+    """Demande d'accès envoyée par un médecin — approuvée ou refusée par le patient."""
 
-    patient = models.ForeignKey(
-        Patient, on_delete=models.CASCADE, related_name="codes_autorisation", verbose_name=_("patient")
-    )
-    code_hash = models.CharField(_("code (haché)"), max_length=128)
-    duree_heures = models.PositiveSmallIntegerField(_("durée de l'accès accordé"), choices=DUREE_CHOICES)
-    cree_le = models.DateTimeField(_("créé le"), auto_now_add=True)
-    expire_le = models.DateTimeField(_("expire le"))
-    utilise = models.BooleanField(_("utilisé"), default=False)
-    utilise_par = models.ForeignKey(
+    class Motif(models.TextChoices):
+        CONSULTATION = "consultation", _("Consultation médicale")
+        URGENCE = "urgence", _("Urgence médicale")
+        BILAN = "bilan", _("Bilan de santé")
+        SUIVI = "suivi", _("Suivi de traitement")
+
+    class Statut(models.TextChoices):
+        EN_ATTENTE = "en_attente", _("En attente")
+        APPROUVEE = "approuvee", _("Approuvée")
+        REFUSEE = "refusee", _("Refusée")
+
+    medecin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        verbose_name=_("utilisé par"),
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="codes_utilises",
+        on_delete=models.CASCADE,
+        related_name="demandes_envoyees",
+        verbose_name=_("médecin"),
     )
-    utilise_le = models.DateTimeField(_("utilisé le"), null=True, blank=True)
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="demandes_acces", verbose_name=_("patient")
+    )
+    motif = models.CharField(_("motif"), max_length=20, choices=Motif.choices)
+    duree_heures = models.PositiveSmallIntegerField(_("durée souhaitée"), choices=DUREE_CHOICES)
+    statut = models.CharField(_("statut"), max_length=12, choices=Statut.choices, default=Statut.EN_ATTENTE)
+    cree_le = models.DateTimeField(_("créée le"), auto_now_add=True)
+    repondu_le = models.DateTimeField(_("répondue le"), null=True, blank=True)
 
     class Meta:
-        verbose_name = _("code d'autorisation")
-        verbose_name_plural = _("codes d'autorisation")
+        verbose_name = _("demande d'accès")
+        verbose_name_plural = _("demandes d'accès")
         ordering = ["-cree_le"]
 
     def __str__(self):
-        return f"Code pour {self.patient} ({'utilisé' if self.utilise else 'actif'})"
+        return f"{self.medecin} → {self.patient} ({self.get_statut_display()})"
 
 
 class Acces(models.Model):
@@ -47,7 +55,7 @@ class Acces(models.Model):
 
     class Source(models.TextChoices):
         CREATION = "creation", _("Création du dossier")
-        CODE = "code", _("Code d'autorisation")
+        DEMANDE = "demande", _("Demande approuvée")
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="acces", verbose_name=_("patient"))
     medecin = models.ForeignKey(

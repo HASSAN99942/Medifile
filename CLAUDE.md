@@ -14,8 +14,8 @@ Stack : Django + templates + JS vanilla + SQLite. PAS d'API séparée, PAS de Ne
 - Résultat visuellement indiscernable de l'ancien front.
 
 ## Règles métier (ne jamais casser)
-- Le PATIENT génère un code d'accès et choisit la durée (24h/48h/72h/7j). Le médecin saisit ce code.
-- L'accès expire seul (vérifié à CHAQUE requête, pas de cron) et est révocable à tout moment.
+- Le MÉDECIN recherche un patient par son nom et lui envoie une demande d'accès (motif + durée 24h/48h/72h/7j). Le PATIENT voit la demande (badge notification) et l'approuve ou la refuse.
+- Une demande approuvée ouvre l'accès pour la durée choisie ; l'accès expire seul (vérifié à chaque requête) et le patient peut révoquer à tout moment.
 - Le médecin qui crée un dossier a un accès de 72h ; ensuite code obligatoire.
 - Login patient = numéro MF (MF-2026-XXXXXX). Mot de passe provisoire affiché 1 fois (fiche imprimée).
 - L'admin ne voit JAMAIS le contenu médical. Le patient est en lecture seule sur le médical.

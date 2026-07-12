@@ -1,7 +1,6 @@
 import datetime
 import re
 
-from django.contrib.auth.hashers import check_password
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -11,8 +10,7 @@ from audit.models import AuditLog
 from medical.models import Medecin, Patient
 
 from .access import a_acces_valide
-from .models import Acces, CodeAutorisation, Consultation
-from .utils import creer_code_autorisation
+from .models import Acces, Consultation, DemandeAcces
 
 
 def creer_medecin(prenom="Amara", nom="Kone", numero_ordre="ORD-001"):
@@ -51,26 +49,20 @@ def creer_patient(prenom="Jean", nom="Diallo", cree_par=None, numero_mf="MF-2026
     return user, patient
 
 
-class CodeAutorisationModelTests(TestCase):
+class DemandeAccesModelTests(TestCase):
     def setUp(self):
         self.medecin_user, self.medecin = creer_medecin()
         self.patient_user, self.patient = creer_patient()
 
-    def test_code_hash_ne_stocke_jamais_le_code_en_clair(self):
-        code_obj, code_clair = creer_code_autorisation(self.patient, duree_heures=48)
-        self.assertNotEqual(code_obj.code_hash, code_clair)
-        self.assertTrue(check_password(code_clair, code_obj.code_hash))
-        self.assertEqual(len(code_clair), 6)
-        self.assertTrue(code_clair.isdigit())
-
-    def test_code_expire_environ_15_minutes_apres_creation(self):
-        code_obj, _ = creer_code_autorisation(self.patient, duree_heures=24)
-        delta = code_obj.expire_le - code_obj.cree_le
-        self.assertAlmostEqual(delta.total_seconds(), 15 * 60, delta=5)
-
-    def test_duree_heures_stockee_correctement(self):
-        code_obj, _ = creer_code_autorisation(self.patient, duree_heures=168)
-        self.assertEqual(code_obj.duree_heures, 168)
+    def test_demande_en_attente_par_defaut(self):
+        demande = DemandeAcces.objects.create(
+            medecin=self.medecin_user,
+            patient=self.patient,
+            motif=DemandeAcces.Motif.CONSULTATION,
+            duree_heures=48,
+        )
+        self.assertEqual(demande.statut, DemandeAcces.Statut.EN_ATTENTE)
+        self.assertIsNone(demande.repondu_le)
 
 
 class AccesValideTests(TestCase):
@@ -82,7 +74,7 @@ class AccesValideTests(TestCase):
         defaults = {
             "patient": self.patient,
             "medecin": self.medecin_user,
-            "source": Acces.Source.CODE,
+            "source": Acces.Source.DEMANDE,
             "expire_le": timezone.now() + datetime.timedelta(hours=48),
             "revoque": False,
         }
@@ -110,7 +102,30 @@ class AccesValideTests(TestCase):
         self.assertFalse(a_acces_valide(self.patient, autre_user))
 
 
-class MedecinDossierVerrouilleTests(TestCase):
+class MedecinRechercheTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        _, self.patient1 = creer_patient(prenom="Jean", nom="Diallo", numero_mf="MF-2026-000001")
+        _, self.patient2 = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def test_liste_sans_recherche_montre_tous_les_patients(self):
+        response = self.client.get(reverse("medical:medecin_patients"))
+        self.assertContains(response, "Diallo")
+        self.assertContains(response, "Ngoma")
+
+    def test_recherche_par_nom_filtre_la_liste(self):
+        response = self.client.get(reverse("medical:medecin_patients"), {"q": "Diallo"})
+        self.assertContains(response, "Diallo")
+        self.assertNotContains(response, "Ngoma")
+
+    def test_recherche_par_numero_mf(self):
+        response = self.client.get(reverse("medical:medecin_patients"), {"q": "MF-2026-000002"})
+        self.assertContains(response, "Ngoma")
+        self.assertNotContains(response, "Diallo")
+
+
+class MedecinDemandeAccesTests(TestCase):
     def setUp(self):
         self.medecin_user, self.medecin = creer_medecin()
         self.patient_user, self.patient = creer_patient()
@@ -128,69 +143,46 @@ class MedecinDossierVerrouilleTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "verrouill")
 
-    def test_code_valide_avec_bon_numero_mf_cree_acces(self):
-        code_obj, code_clair = creer_code_autorisation(self.patient, duree_heures=48)
+    def test_envoyer_demande_cree_demande_en_attente(self):
         response = self.client.post(
             reverse("consent:dossier_verrouille", args=[self.patient.pk]),
-            {"numero_mf": self.patient.numero_mf, "code": code_clair},
-        )
-        self.assertRedirects(response, reverse("consent:dossier_medecin", args=[self.patient.pk]))
-        acces = Acces.objects.get(patient=self.patient, medecin=self.medecin_user)
-        self.assertFalse(acces.revoque)
-        self.assertEqual(acces.source, Acces.Source.CODE)
-        delta = acces.expire_le - timezone.now()
-        self.assertAlmostEqual(delta.total_seconds(), 48 * 3600, delta=10)
-
-        code_obj.refresh_from_db()
-        self.assertTrue(code_obj.utilise)
-        self.assertEqual(code_obj.utilise_par, self.medecin_user)
-
-        self.assertTrue(
-            AuditLog.objects.filter(action=AuditLog.Action.ACCES_ACCORDE, patient_concerne=self.patient).exists()
-        )
-
-    def test_code_deja_utilise_ne_fonctionne_plus(self):
-        code_obj, code_clair = creer_code_autorisation(self.patient, duree_heures=24)
-        code_obj.utilise = True
-        code_obj.save(update_fields=["utilise"])
-        response = self.client.post(
-            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
-            {"numero_mf": self.patient.numero_mf, "code": code_clair},
+            {"motif": "consultation", "duree_heures": "48"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(Acces.objects.filter(patient=self.patient, medecin=self.medecin_user).exists())
-
-    def test_code_expire_ne_fonctionne_plus(self):
-        code_obj, code_clair = creer_code_autorisation(self.patient, duree_heures=24)
-        code_obj.expire_le = timezone.now() - datetime.timedelta(minutes=1)
-        code_obj.save(update_fields=["expire_le"])
-        response = self.client.post(
-            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
-            {"numero_mf": self.patient.numero_mf, "code": code_clair},
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Acces.objects.filter(patient=self.patient, medecin=self.medecin_user).exists())
+        demande = DemandeAcces.objects.get(medecin=self.medecin_user, patient=self.patient)
+        self.assertEqual(demande.statut, DemandeAcces.Statut.EN_ATTENTE)
+        self.assertEqual(demande.duree_heures, 48)
+        self.assertEqual(demande.motif, "consultation")
         self.assertTrue(
-            AuditLog.objects.filter(action=AuditLog.Action.CODE_ECHEC, patient_concerne=self.patient).exists()
+            AuditLog.objects.filter(action=AuditLog.Action.DEMANDE_ACCES, patient_concerne=self.patient).exists()
         )
 
-    def test_mauvais_numero_mf_avec_bon_code_echoue(self):
-        _, code_clair = creer_code_autorisation(self.patient, duree_heures=24)
-        response = self.client.post(
-            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
-            {"numero_mf": "MF-2026-999999", "code": code_clair},
+    def test_demande_en_attente_affiche_message_dattente_pas_le_formulaire(self):
+        DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="consultation", duree_heures=24
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Acces.objects.filter(patient=self.patient, medecin=self.medecin_user).exists())
-        self.assertTrue(
-            AuditLog.objects.filter(action=AuditLog.Action.CODE_ECHEC, patient_concerne=self.patient).exists()
+        response = self.client.get(reverse("consent:dossier_verrouille", args=[self.patient.pk]))
+        self.assertContains(response, "attente")
+        self.assertNotContains(response, "<form")
+
+    def test_ne_peut_pas_envoyer_deux_demandes_en_attente(self):
+        self.client.post(
+            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
+            {"motif": "consultation", "duree_heures": "48"},
+        )
+        self.client.post(
+            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
+            {"motif": "urgence", "duree_heures": "24"},
+        )
+        self.assertEqual(
+            DemandeAcces.objects.filter(medecin=self.medecin_user, patient=self.patient).count(), 1
         )
 
     def test_dossier_accessible_avec_acces_valide_et_log_acces_dossier(self):
         Acces.objects.create(
             patient=self.patient,
             medecin=self.medecin_user,
-            source=Acces.Source.CODE,
+            source=Acces.Source.DEMANDE,
             expire_le=timezone.now() + datetime.timedelta(hours=48),
         )
         response = self.client.get(reverse("consent:dossier_medecin", args=[self.patient.pk]))
@@ -211,7 +203,7 @@ class MedecinDossierVerrouilleTests(TestCase):
         Acces.objects.create(
             patient=self.patient,
             medecin=self.medecin_user,
-            source=Acces.Source.CODE,
+            source=Acces.Source.DEMANDE,
             expire_le=timezone.now() + datetime.timedelta(hours=48),
         )
         response = self.client.post(
@@ -231,49 +223,71 @@ class MedecinDossierVerrouilleTests(TestCase):
         self.assertEqual(consultation.medecin, self.medecin_user)
 
 
-class PatientAccesTests(TestCase):
+class PatientDemandeEtAccesTests(TestCase):
     def setUp(self):
         self.medecin_user, self.medecin = creer_medecin()
         self.patient_user, self.patient = creer_patient()
         self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
 
-    def test_generer_code_form_affiche(self):
-        response = self.client.get(reverse("consent:generer_code"))
-        self.assertEqual(response.status_code, 200)
-
-    def test_generer_code_cree_code_hache_et_redirige(self):
-        response = self.client.post(reverse("consent:generer_code"), {"duree_heures": "48"})
-        self.assertEqual(response.status_code, 302)
-        code_obj = CodeAutorisation.objects.get(patient=self.patient)
-        self.assertEqual(code_obj.duree_heures, 48)
-        self.assertTrue(
-            AuditLog.objects.filter(action=AuditLog.Action.GENERATION_CODE, patient_concerne=self.patient).exists()
-        )
-
-    def test_code_affiche_une_seule_fois(self):
-        self.client.post(reverse("consent:generer_code"), {"duree_heures": "24"})
-        code_obj = CodeAutorisation.objects.get(patient=self.patient)
-        url = reverse("consent:code_resultat", args=[code_obj.pk])
-        premiere = self.client.get(url)
-        self.assertContains(premiere, "code-genere")
-        deuxieme = self.client.get(url)
-        self.assertNotContains(deuxieme, "code-genere")
-
-    def test_mes_acces_liste_les_acces_du_patient(self):
-        Acces.objects.create(
-            patient=self.patient,
-            medecin=self.medecin_user,
-            source=Acces.Source.CODE,
-            expire_le=timezone.now() + datetime.timedelta(hours=24),
+    def test_mes_acces_liste_demande_en_attente(self):
+        DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="consultation", duree_heures=48
         )
         response = self.client.get(reverse("consent:mes_acces"))
         self.assertContains(response, self.medecin_user.nom)
+        self.assertContains(response, "attente")
+
+    def test_approuver_demande_cree_acces(self):
+        demande = DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="consultation", duree_heures=48
+        )
+        response = self.client.post(reverse("consent:approuver_demande", args=[demande.pk]))
+        self.assertRedirects(response, reverse("consent:mes_acces"))
+
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, DemandeAcces.Statut.APPROUVEE)
+        self.assertIsNotNone(demande.repondu_le)
+
+        acces = Acces.objects.get(patient=self.patient, medecin=self.medecin_user)
+        self.assertEqual(acces.source, Acces.Source.DEMANDE)
+        self.assertFalse(acces.revoque)
+        delta = acces.expire_le - timezone.now()
+        self.assertAlmostEqual(delta.total_seconds(), 48 * 3600, delta=10)
+        self.assertTrue(a_acces_valide(self.patient, self.medecin_user))
+
+        self.assertTrue(
+            AuditLog.objects.filter(action=AuditLog.Action.APPROBATION_ACCES, patient_concerne=self.patient).exists()
+        )
+
+    def test_refuser_demande_ne_cree_pas_acces(self):
+        demande = DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="urgence", duree_heures=24
+        )
+        response = self.client.post(reverse("consent:refuser_demande", args=[demande.pk]))
+        self.assertRedirects(response, reverse("consent:mes_acces"))
+
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, DemandeAcces.Statut.REFUSEE)
+        self.assertIsNotNone(demande.repondu_le)
+        self.assertFalse(Acces.objects.filter(patient=self.patient, medecin=self.medecin_user).exists())
+        self.assertFalse(a_acces_valide(self.patient, self.medecin_user))
+        self.assertTrue(
+            AuditLog.objects.filter(action=AuditLog.Action.REFUS_ACCES, patient_concerne=self.patient).exists()
+        )
+
+    def test_patient_ne_peut_pas_repondre_a_la_demande_dun_autre_patient(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Sy", numero_mf="MF-2026-000002")
+        demande = DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=autre_patient, motif="consultation", duree_heures=24
+        )
+        response = self.client.post(reverse("consent:approuver_demande", args=[demande.pk]))
+        self.assertEqual(response.status_code, 404)
 
     def test_revoquer_acces(self):
         acces = Acces.objects.create(
             patient=self.patient,
             medecin=self.medecin_user,
-            source=Acces.Source.CODE,
+            source=Acces.Source.DEMANDE,
             expire_le=timezone.now() + datetime.timedelta(hours=24),
         )
         response = self.client.post(reverse("consent:revoquer_acces", args=[acces.pk]))
@@ -291,7 +305,7 @@ class PatientAccesTests(TestCase):
         acces = Acces.objects.create(
             patient=autre_patient,
             medecin=self.medecin_user,
-            source=Acces.Source.CODE,
+            source=Acces.Source.DEMANDE,
             expire_le=timezone.now() + datetime.timedelta(hours=24),
         )
         response = self.client.post(reverse("consent:revoquer_acces", args=[acces.pk]))
@@ -301,7 +315,7 @@ class PatientAccesTests(TestCase):
         Acces.objects.create(
             patient=self.patient,
             medecin=self.medecin_user,
-            source=Acces.Source.CODE,
+            source=Acces.Source.DEMANDE,
             expire_le=timezone.now() + datetime.timedelta(hours=24),
         )
         response = self.client.get(reverse("consent:journal"))
@@ -311,6 +325,35 @@ class PatientAccesTests(TestCase):
         response = self.client.get(reverse("consent:dossier_patient"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "<form")
+
+    def test_badge_nb_demandes_dans_le_contexte(self):
+        DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="consultation", duree_heures=24
+        )
+        response = self.client.get(reverse("consent:dossier_patient"))
+        self.assertContains(response, 'class="nb"')
+
+    def test_medecin_peut_renvoyer_une_demande_apres_refus(self):
+        demande = DemandeAcces.objects.create(
+            medecin=self.medecin_user, patient=self.patient, motif="consultation", duree_heures=24
+        )
+        self.client.post(reverse("consent:refuser_demande", args=[demande.pk]))
+        self.client.logout()
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+        response = self.client.post(
+            reverse("consent:dossier_verrouille", args=[self.patient.pk]),
+            {"motif": "suivi", "duree_heures": "72"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            DemandeAcces.objects.filter(medecin=self.medecin_user, patient=self.patient).count(), 2
+        )
+        self.assertEqual(
+            DemandeAcces.objects.filter(
+                medecin=self.medecin_user, patient=self.patient, statut=DemandeAcces.Statut.EN_ATTENTE
+            ).count(),
+            1,
+        )
 
 
 class CreationDossierAccesInitialTests(TestCase):
@@ -343,14 +386,15 @@ class CreationDossierAccesInitialTests(TestCase):
 
 
 class ScenarioCompletTests(TestCase):
-    """Scénario bout en bout demandé : création → code → accès → consultation → révocation → blocage."""
+    """Scénario demandé : recherche → demande 48h → approbation → dossier + consultation → révocation → blocage."""
 
     def setUp(self):
         Etablissement.objects.create(nom="CHU Test", ville="Douala")
         self.medecin_user, self.medecin = creer_medecin()
 
     def test_scenario_complet(self):
-        # 1. Le médecin crée le dossier patient (accès 72h automatique).
+        # 1. Le médecin crée le dossier patient (accès 72h automatique), puis on le révoque pour
+        #    vérifier que le flux de demande est ensuite bien nécessaire.
         self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
         self.client.post(
             reverse("medical:medecin_patient_creer"),
@@ -366,17 +410,33 @@ class ScenarioCompletTests(TestCase):
         )
         patient = Patient.objects.get(user__prenom="Jean", user__nom="Diallo")
         numero_mf = patient.numero_mf
+        Acces.objects.filter(patient=patient, medecin=self.medecin_user).update(
+            revoque=True, revoque_le=timezone.now()
+        )
 
-        fiche_url = reverse("medical:medecin_patient_fiche", args=[patient.pk])
-        fiche_resp = self.client.get(fiche_url)
+        fiche_resp = self.client.get(reverse("medical:medecin_patient_fiche", args=[patient.pk]))
         match = re.search(
             r"Mot de passe provisoire.*?<strong[^>]*>([A-Z0-9]+)</strong>", fiche_resp.content.decode()
         )
         self.assertIsNotNone(match)
         mot_de_passe_provisoire = match.group(1)
+
+        # 2. Le médecin recherche le patient par nom.
+        recherche_resp = self.client.get(reverse("medical:medecin_patients"), {"q": "Diallo"})
+        self.assertContains(recherche_resp, "Diallo")
+
+        # 3. Le médecin envoie une demande d'accès 48h.
+        verrouille_resp = self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
+        self.assertRedirects(verrouille_resp, reverse("consent:dossier_verrouille", args=[patient.pk]))
+        self.client.post(
+            reverse("consent:dossier_verrouille", args=[patient.pk]),
+            {"motif": "consultation", "duree_heures": "48"},
+        )
+        demande = DemandeAcces.objects.get(medecin=self.medecin_user, patient=patient)
+        self.assertEqual(demande.statut, DemandeAcces.Statut.EN_ATTENTE)
         self.client.get(reverse("accounts:logout"))
 
-        # 2. Le patient se connecte, doit changer son mot de passe.
+        # 4. Le patient se connecte, doit changer son mot de passe, voit la demande, et l'approuve.
         login_resp = self.client.post(
             reverse("accounts:login"),
             {"identifiant": numero_mf, "password": mot_de_passe_provisoire},
@@ -390,33 +450,16 @@ class ScenarioCompletTests(TestCase):
                 "mdp_confirmation": "NouveauMdpPatient123",
             },
         )
-
-        # 3. Le patient génère un code 48h.
-        self.client.post(reverse("consent:generer_code"), {"duree_heures": "48"})
-        code_obj = CodeAutorisation.objects.get(patient=patient)
-        code_url = reverse("consent:code_resultat", args=[code_obj.pk])
-        code_resp = self.client.get(code_url)
-        code_match = re.search(r'id="code-genere"[^>]*>\s*(\d{6})', code_resp.content.decode())
-        self.assertIsNotNone(code_match)
-        code_clair = code_match.group(1)
+        mes_acces_resp = self.client.get(reverse("consent:mes_acces"))
+        self.assertContains(mes_acces_resp, "Amara")
+        self.client.post(reverse("consent:approuver_demande", args=[demande.pk]))
+        self.assertTrue(a_acces_valide(patient, self.medecin_user))
         self.client.get(reverse("accounts:logout"))
 
-        # 4. Le médecin saisit n° MF + code, ouvre le dossier, ajoute une consultation.
+        # 5. Le médecin ouvre le dossier et ajoute une consultation.
         self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
-        # On révoque l'accès de création (72h) pour vérifier que le code est ensuite bien nécessaire.
-        Acces.objects.filter(patient=patient, medecin=self.medecin_user).update(
-            revoque=True, revoque_le=timezone.now()
-        )
-        verrouille_resp = self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
-        self.assertRedirects(verrouille_resp, reverse("consent:dossier_verrouille", args=[patient.pk]))
-
-        deverrouille_resp = self.client.post(
-            reverse("consent:dossier_verrouille", args=[patient.pk]),
-            {"numero_mf": numero_mf, "code": code_clair},
-        )
-        self.assertRedirects(deverrouille_resp, reverse("consent:dossier_medecin", args=[patient.pk]))
-
-        self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
+        ouvert_resp = self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
+        self.assertEqual(ouvert_resp.status_code, 200)
         self.client.post(
             reverse("consent:ajouter_consultation", args=[patient.pk]),
             {
@@ -431,7 +474,7 @@ class ScenarioCompletTests(TestCase):
         self.assertEqual(Consultation.objects.filter(patient=patient).count(), 1)
         self.client.get(reverse("accounts:logout"))
 
-        # 5. Le patient voit tout et révoque l'accès.
+        # 6. Le patient voit tout et révoque l'accès.
         self.client.login(username=numero_mf, password="NouveauMdpPatient123")
         dossier_resp = self.client.get(reverse("consent:dossier_patient"))
         self.assertContains(dossier_resp, "Douleur abdominale")
@@ -444,14 +487,14 @@ class ScenarioCompletTests(TestCase):
         journal_actions = set(
             AuditLog.objects.filter(patient_concerne=patient).values_list("action", flat=True)
         )
-        self.assertIn(AuditLog.Action.GENERATION_CODE, journal_actions)
-        self.assertIn(AuditLog.Action.ACCES_ACCORDE, journal_actions)
+        self.assertIn(AuditLog.Action.DEMANDE_ACCES, journal_actions)
+        self.assertIn(AuditLog.Action.APPROBATION_ACCES, journal_actions)
         self.assertIn(AuditLog.Action.ACCES_DOSSIER, journal_actions)
         self.assertIn(AuditLog.Action.REVOCATION_ACCES, journal_actions)
         self.assertEqual(journal_resp.status_code, 200)
         self.client.get(reverse("accounts:logout"))
 
-        # 6. Le médecin est de nouveau bloqué.
+        # 7. Le médecin est de nouveau bloqué.
         self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
         bloque_resp = self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
         self.assertRedirects(bloque_resp, reverse("consent:dossier_verrouille", args=[patient.pk]))

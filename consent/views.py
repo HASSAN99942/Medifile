@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.contrib.auth.hashers import check_password
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -9,59 +8,19 @@ from audit.models import AuditLog, log_action
 from medical.models import Patient
 
 from .access import a_acces_valide, exige_acces
-from .models import DUREE_CHOICES, Acces, CodeAutorisation, Consultation
-from .utils import creer_code_autorisation
+from .models import DUREE_CHOICES, Acces, Consultation, DemandeAcces
 
 # ── PATIENT ────────────────────────────────────────────────
 
 
 @role_required("patient")
-def generer_code(request):
-    patient = request.user.patient
-    if request.method == "POST":
-        try:
-            duree_heures = int(request.POST.get("duree_heures", 24))
-        except ValueError:
-            duree_heures = 24
-        if duree_heures not in dict(DUREE_CHOICES):
-            duree_heures = 24
-        code_obj, code_clair = creer_code_autorisation(patient, duree_heures)
-        log_action(
-            AuditLog.Action.GENERATION_CODE,
-            request=request,
-            user=request.user,
-            patient_concerne=patient,
-            detail=f"Durée d'accès choisie : {duree_heures}h",
-        )
-        request.session[f"code_clair_{code_obj.pk}"] = code_clair
-        return redirect("consent:code_resultat", pk=code_obj.pk)
-
-    return render(
-        request,
-        "consent/generer_code.html",
-        {"page_title": "Générer un code", "active": "p-acces", "durees": DUREE_CHOICES},
-    )
-
-
-@role_required("patient")
-def code_resultat(request, pk):
-    code_obj = get_object_or_404(CodeAutorisation, pk=pk, patient=request.user.patient)
-    code_clair = request.session.pop(f"code_clair_{code_obj.pk}", None)
-    return render(
-        request,
-        "consent/code_resultat.html",
-        {
-            "page_title": "Code temporaire",
-            "active": "p-acces",
-            "code_obj": code_obj,
-            "code_clair": code_clair,
-        },
-    )
-
-
-@role_required("patient")
 def mes_acces(request):
     patient = request.user.patient
+    demandes_en_attente = (
+        DemandeAcces.objects.select_related("medecin")
+        .filter(patient=patient, statut=DemandeAcces.Statut.EN_ATTENTE)
+        .order_by("-cree_le")
+    )
     acces_list = Acces.objects.select_related("medecin").filter(patient=patient).order_by("-accorde_le")
     return render(
         request,
@@ -69,10 +28,53 @@ def mes_acces(request):
         {
             "page_title": "Accès & Consentements",
             "active": "p-acces",
+            "demandes_en_attente": demandes_en_attente,
             "acces_list": acces_list,
             "maintenant": timezone.now(),
         },
     )
+
+
+@role_required("patient")
+def approuver_demande(request, pk):
+    patient = request.user.patient
+    demande = get_object_or_404(DemandeAcces, pk=pk, patient=patient, statut=DemandeAcces.Statut.EN_ATTENTE)
+    if request.method == "POST":
+        demande.statut = DemandeAcces.Statut.APPROUVEE
+        demande.repondu_le = timezone.now()
+        demande.save(update_fields=["statut", "repondu_le"])
+        Acces.objects.create(
+            patient=patient,
+            medecin=demande.medecin,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() + timedelta(hours=demande.duree_heures),
+        )
+        log_action(
+            AuditLog.Action.APPROBATION_ACCES,
+            request=request,
+            user=request.user,
+            patient_concerne=patient,
+            detail=f"{demande.medecin.prenom} {demande.medecin.nom} — {demande.duree_heures}h",
+        )
+    return redirect("consent:mes_acces")
+
+
+@role_required("patient")
+def refuser_demande(request, pk):
+    patient = request.user.patient
+    demande = get_object_or_404(DemandeAcces, pk=pk, patient=patient, statut=DemandeAcces.Statut.EN_ATTENTE)
+    if request.method == "POST":
+        demande.statut = DemandeAcces.Statut.REFUSEE
+        demande.repondu_le = timezone.now()
+        demande.save(update_fields=["statut", "repondu_le"])
+        log_action(
+            AuditLog.Action.REFUS_ACCES,
+            request=request,
+            user=request.user,
+            patient_concerne=patient,
+            detail=f"{demande.medecin.prenom} {demande.medecin.nom}",
+        )
+    return redirect("consent:mes_acces")
 
 
 @role_required("patient")
@@ -126,49 +128,53 @@ def dossier_verrouille(request, pk):
     if a_acces_valide(patient, request.user):
         return redirect("consent:dossier_medecin", pk=pk)
 
-    erreur = None
-    if request.method == "POST":
-        numero_mf = request.POST.get("numero_mf", "").strip()
-        code = request.POST.get("code", "").strip()
+    demande_en_attente = DemandeAcces.objects.filter(
+        medecin=request.user, patient=patient, statut=DemandeAcces.Statut.EN_ATTENTE
+    ).first()
 
-        candidats = CodeAutorisation.objects.filter(patient=patient, utilise=False, expire_le__gt=timezone.now())
-        code_obj = next((c for c in candidats if code and check_password(code, c.code_hash)), None)
-        mf_ok = bool(numero_mf) and bool(patient.numero_mf) and numero_mf.upper() == patient.numero_mf.upper()
+    erreurs = []
+    if request.method == "POST" and demande_en_attente is None:
+        motif = request.POST.get("motif", "")
+        try:
+            duree_heures = int(request.POST.get("duree_heures", 0))
+        except ValueError:
+            duree_heures = 0
 
-        if mf_ok and code_obj is not None:
-            Acces.objects.create(
-                patient=patient,
+        if motif not in dict(DemandeAcces.Motif.choices):
+            erreurs.append("Motif invalide.")
+        if duree_heures not in dict(DUREE_CHOICES):
+            erreurs.append("Durée invalide.")
+
+        if not erreurs:
+            DemandeAcces.objects.create(
                 medecin=request.user,
-                source=Acces.Source.CODE,
-                expire_le=timezone.now() + timedelta(hours=code_obj.duree_heures),
+                patient=patient,
+                motif=motif,
+                duree_heures=duree_heures,
             )
-            code_obj.utilise = True
-            code_obj.utilise_par = request.user
-            code_obj.utilise_le = timezone.now()
-            code_obj.save(update_fields=["utilise", "utilise_par", "utilise_le"])
             log_action(
-                AuditLog.Action.ACCES_ACCORDE,
+                AuditLog.Action.DEMANDE_ACCES,
                 request=request,
                 user=request.user,
                 patient_concerne=patient,
-                detail=f"Code utilisé — accès {code_obj.duree_heures}h",
+                detail=f"{patient.user.prenom} {patient.user.nom} — {motif} ({duree_heures}h)",
             )
-            return redirect("consent:dossier_medecin", pk=pk)
-
-        erreur = "Numéro MF ou code invalide, ou code expiré."
-        log_action(
-            AuditLog.Action.CODE_ECHEC,
-            request=request,
-            user=request.user,
-            patient_concerne=patient,
-            identifiant_saisi=numero_mf,
-            detail="Échec de validation du code",
-        )
+            demande_en_attente = DemandeAcces.objects.filter(
+                medecin=request.user, patient=patient, statut=DemandeAcces.Statut.EN_ATTENTE
+            ).first()
 
     return render(
         request,
         "consent/dossier_verrouille.html",
-        {"page_title": "Dossier patient", "active": "d-patients", "patient": patient, "erreur": erreur},
+        {
+            "page_title": "Dossier patient",
+            "active": "d-patients",
+            "patient": patient,
+            "demande_en_attente": demande_en_attente,
+            "erreurs": erreurs,
+            "motifs": DemandeAcces.Motif.choices,
+            "durees": DUREE_CHOICES,
+        },
     )
 
 

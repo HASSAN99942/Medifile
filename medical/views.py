@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -187,13 +188,19 @@ def admin_stats(request):
 
 @role_required("medecin")
 def medecin_patients(request):
-    patients = list(Patient.objects.select_related("user").order_by("-date_creation"))
+    q = request.GET.get("q", "").strip()
+    queryset = Patient.objects.select_related("user").order_by("-date_creation")
+    if q:
+        queryset = queryset.filter(
+            Q(user__prenom__icontains=q) | Q(user__nom__icontains=q) | Q(user__identifiant__icontains=q)
+        )
+    patients = list(queryset)
     for patient in patients:
         patient.a_acces = a_acces_valide(patient, request.user)
     return render(
         request,
         "medical/medecin_patients.html",
-        {"page_title": "Patients", "active": "d-patients", "patients": patients},
+        {"page_title": "Patients", "active": "d-patients", "patients": patients, "q": q},
     )
 
 
