@@ -5,10 +5,12 @@ from django.utils import timezone
 
 from accounts.decorators import role_required
 from audit.models import AuditLog, log_action
-from medical.models import Patient
+from medical.models import Ordonnance, OrdonnanceLigne, Patient
 
 from .access import a_acces_valide, exige_acces
 from .models import DUREE_CHOICES, Acces, Consultation, DemandeAcces
+
+DUREE_VALIDITE_ORDONNANCE_JOURS = 90
 
 # ── PATIENT ────────────────────────────────────────────────
 
@@ -119,6 +121,22 @@ def dossier_patient(request):
     )
 
 
+@role_required("patient")
+def mes_ordonnances(request):
+    patient = request.user.patient
+    ordonnances = (
+        Ordonnance.objects.select_related("medecin")
+        .prefetch_related("lignes")
+        .filter(patient=patient)
+        .order_by("-date", "-id")
+    )
+    return render(
+        request,
+        "consent/mes_ordonnances.html",
+        {"page_title": "Mes ordonnances", "active": "p-ordos", "ordonnances": ordonnances},
+    )
+
+
 # ── MÉDECIN ────────────────────────────────────────────────
 
 
@@ -190,6 +208,12 @@ def dossier_medecin(request, patient):
     consultations = Consultation.objects.select_related("medecin").filter(patient=patient).order_by(
         "-date_consultation"
     )
+    ordonnances = (
+        Ordonnance.objects.select_related("medecin")
+        .prefetch_related("lignes")
+        .filter(patient=patient)
+        .order_by("-date", "-id")
+    )
     return render(
         request,
         "consent/dossier_medecin.html",
@@ -198,6 +222,7 @@ def dossier_medecin(request, patient):
             "active": "d-patients",
             "patient": patient,
             "consultations": consultations,
+            "ordonnances": ordonnances,
         },
     )
 
@@ -215,4 +240,48 @@ def ajouter_consultation(request, patient):
             ta=request.POST.get("ta", "").strip(),
             spo2=request.POST.get("spo2") or None,
         )
+    return redirect("consent:dossier_medecin", pk=patient.pk)
+
+
+@exige_acces
+def ajouter_ordonnance(request, patient):
+    if request.method == "POST":
+        try:
+            validite = int(request.POST.get("validite_jours", DUREE_VALIDITE_ORDONNANCE_JOURS))
+        except (ValueError, TypeError):
+            validite = DUREE_VALIDITE_ORDONNANCE_JOURS
+        if validite < 1:
+            validite = DUREE_VALIDITE_ORDONNANCE_JOURS
+
+        medicaments = request.POST.getlist("medicament")
+        dosages = request.POST.getlist("dosage")
+        frequences = request.POST.getlist("frequence")
+        durees = request.POST.getlist("duree")
+        lignes = [
+            (m.strip(), d.strip(), f.strip(), du.strip())
+            for m, d, f, du in zip(medicaments, dosages, frequences, durees)
+            if m.strip()
+        ]
+
+        if lignes:
+            ordonnance = Ordonnance.objects.create(
+                patient=patient,
+                medecin=request.user,
+                date_expiration=timezone.now().date() + timedelta(days=validite),
+            )
+            OrdonnanceLigne.objects.bulk_create(
+                [
+                    OrdonnanceLigne(
+                        ordonnance=ordonnance, medicament=m, dosage=d, frequence=f, duree=du
+                    )
+                    for m, d, f, du in lignes
+                ]
+            )
+            log_action(
+                AuditLog.Action.AJOUT_ORDONNANCE,
+                request=request,
+                user=request.user,
+                patient_concerne=patient,
+                detail=f"{patient.user.prenom} {patient.user.nom} — {len(lignes)} médicament(s)",
+            )
     return redirect("consent:dossier_medecin", pk=patient.pk)

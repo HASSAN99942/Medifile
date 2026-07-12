@@ -83,3 +83,57 @@ class Patient(models.Model):
 
     def __str__(self):
         return f"{self.user} ({self.numero_mf})"
+
+
+class Ordonnance(models.Model):
+    """Ordonnance prescrite par un médecin ayant un accès valide. Le patient la consulte
+    en lecture seule et peut l'imprimer. Le statut Active/Expirée découle de date_expiration."""
+
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="ordonnances", verbose_name=_("patient")
+    )
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="ordonnances_prescrites",
+        verbose_name=_("médecin"),
+    )
+    date = models.DateField(_("date"), auto_now_add=True)
+    date_expiration = models.DateField(_("date d'expiration"))
+
+    class Meta:
+        verbose_name = _("ordonnance")
+        verbose_name_plural = _("ordonnances")
+        ordering = ["-date", "-id"]
+
+    @property
+    def est_active(self):
+        return self.date_expiration >= datetime.date.today()
+
+    @property
+    def reference(self):
+        return f"ORD-{self.pk:06d}"
+
+    def __str__(self):
+        return f"{self.reference} — {self.patient}"
+
+
+class OrdonnanceLigne(models.Model):
+    """Un médicament prescrit dans une ordonnance."""
+
+    ordonnance = models.ForeignKey(
+        Ordonnance, on_delete=models.CASCADE, related_name="lignes", verbose_name=_("ordonnance")
+    )
+    medicament = models.CharField(_("médicament"), max_length=200)
+    dosage = models.CharField(_("dosage"), max_length=100, blank=True)
+    frequence = models.CharField(_("fréquence"), max_length=100, blank=True)
+    duree = models.CharField(_("durée"), max_length=100, blank=True)
+
+    class Meta:
+        verbose_name = _("ligne d'ordonnance")
+        verbose_name_plural = _("lignes d'ordonnance")
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.medicament} {self.dosage}".strip()

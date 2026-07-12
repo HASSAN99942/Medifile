@@ -22,6 +22,7 @@ class AuditLog(models.Model):
         ACCES_DOSSIER = "ACCES_DOSSIER", _("Accès au dossier")
         ACCES_REFUSE = "ACCES_REFUSE", _("Accès refusé")
         REVOCATION_ACCES = "REVOCATION_ACCES", _("Révocation d'un accès")
+        AJOUT_ORDONNANCE = "AJOUT_ORDONNANCE", _("Ajout d'une ordonnance")
 
     action = models.CharField(_("action"), max_length=30, choices=Action.choices)
     utilisateur = models.ForeignKey(

@@ -1,0 +1,37 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div style="background:#FFFBEB;border:1px solid #F6E05E;border-radius:var(--rs);padding:11px 15px;margin-bottom:22px;font-size:.83rem;color:#744210">
+  ⚠️ Ne modifiez jamais votre traitement sans l'avis de votre médecin.
+</div>
+{% for o in ordonnances %}
+<div class="card" style="margin-bottom:20px;{% if o.est_active %}border-left:4px solid var(--green){% else %}border-left:4px solid var(--border){% endif %}">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:15px">
+    <div>
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+        <div style="font-family:var(--fh);font-weight:700;font-size:1rem">Ordonnance {{ o.reference }}</div>
+        {% if o.est_active %}<span class="badge b-ok">✅ Active</span>{% else %}<span class="badge b-gray">Expirée</span>{% endif %}
+      </div>
+      <div style="font-size:.78rem;color:var(--slate);margin-top:3px">📅 {{ o.date|date:"d/m/Y" }} · <strong>{% if o.medecin %}Dr. {{ o.medecin.prenom }} {{ o.medecin.nom }}{% else %}—{% endif %}</strong></div>
+    </div>
+    <div style="display:flex;gap:7px">
+      <button class="btn btn-s btn-sm" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+  </div>
+  {% for l in o.lignes.all %}
+    <div style="display:flex;align-items:center;gap:14px;padding:13px;background:{% if o.est_active %}var(--teal-pale){% else %}var(--mist){% endif %};border-radius:var(--rs);margin-bottom:7px">
+      <div class="med-ico" style="background:{% if o.est_active %}var(--teal){% else %}#CBD5E0{% endif %}">💊</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.92rem">{{ l.medicament }} <span style="color:var(--teal);font-size:.8rem">{{ l.dosage }}</span></div>
+        <div style="font-size:.78rem;color:var(--slate)">{{ l.frequence }}{% if l.frequence and l.duree %} · {% endif %}{{ l.duree }}</div>
+      </div>
+    </div>
+  {% endfor %}
+  {% if o.est_active %}<div style="margin-top:11px;padding:10px 13px;background:rgba(56,161,105,.08);border-radius:var(--rs);font-size:.79rem;color:var(--green)">💡 Prenez vos médicaments aux mêmes heures chaque jour.</div>{% endif %}
+</div>
+{% empty %}
+<div class="empty"><div class="empty-ic">💊</div><div class="empty-t">Aucune ordonnance</div></div>
+{% endfor %}
+{% endblock %}

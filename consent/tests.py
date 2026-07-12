@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from accounts.models import Etablissement, User
 from audit.models import AuditLog
-from medical.models import Medecin, Patient
+from medical.models import Medecin, Ordonnance, OrdonnanceLigne, Patient
 
 from .access import a_acces_valide
 from .models import Acces, Consultation, DemandeAcces
@@ -498,3 +498,188 @@ class ScenarioCompletTests(TestCase):
         self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
         bloque_resp = self.client.get(reverse("consent:dossier_medecin", args=[patient.pk]))
         self.assertRedirects(bloque_resp, reverse("consent:dossier_verrouille", args=[patient.pk]))
+
+
+class OrdonnanceModelTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+
+    def test_est_active_true_si_non_expiree(self):
+        ordonnance = Ordonnance.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() + datetime.timedelta(days=1),
+        )
+        self.assertTrue(ordonnance.est_active)
+
+    def test_est_active_false_si_expiree(self):
+        ordonnance = Ordonnance.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() - datetime.timedelta(days=1),
+        )
+        self.assertFalse(ordonnance.est_active)
+
+
+class OrdonnanceMedecinTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        Acces.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() + datetime.timedelta(hours=48),
+        )
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def test_creer_ordonnance_multi_medicaments(self):
+        response = self.client.post(
+            reverse("consent:ajouter_ordonnance", args=[self.patient.pk]),
+            {
+                "medicament": ["Paracétamol", "Amoxicilline"],
+                "dosage": ["1000mg", "500mg"],
+                "frequence": ["3x/jour", "2x/jour"],
+                "duree": ["5 jours", "7 jours"],
+                "validite_jours": "90",
+            },
+        )
+        self.assertRedirects(response, reverse("consent:dossier_medecin", args=[self.patient.pk]))
+        ordonnance = Ordonnance.objects.get(patient=self.patient)
+        self.assertEqual(ordonnance.medecin, self.medecin_user)
+        self.assertEqual(ordonnance.lignes.count(), 2)
+        self.assertEqual(
+            set(ordonnance.lignes.values_list("medicament", flat=True)),
+            {"Paracétamol", "Amoxicilline"},
+        )
+        self.assertTrue(ordonnance.est_active)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action=AuditLog.Action.AJOUT_ORDONNANCE, patient_concerne=self.patient
+            ).exists()
+        )
+
+    def test_lignes_vides_ignorees(self):
+        self.client.post(
+            reverse("consent:ajouter_ordonnance", args=[self.patient.pk]),
+            {
+                "medicament": ["Ibuprofène", ""],
+                "dosage": ["200mg", ""],
+                "frequence": ["2x/jour", ""],
+                "duree": ["3 jours", ""],
+                "validite_jours": "30",
+            },
+        )
+        ordonnance = Ordonnance.objects.get(patient=self.patient)
+        self.assertEqual(ordonnance.lignes.count(), 1)
+
+    def test_ordonnance_sans_medicament_ne_cree_rien(self):
+        self.client.post(
+            reverse("consent:ajouter_ordonnance", args=[self.patient.pk]),
+            {"medicament": [""], "dosage": [""], "frequence": [""], "duree": [""], "validite_jours": "90"},
+        )
+        self.assertEqual(Ordonnance.objects.count(), 0)
+
+    def test_date_expiration_calculee(self):
+        self.client.post(
+            reverse("consent:ajouter_ordonnance", args=[self.patient.pk]),
+            {"medicament": ["Doliprane"], "dosage": [""], "frequence": [""], "duree": [""], "validite_jours": "10"},
+        )
+        ordonnance = Ordonnance.objects.get(patient=self.patient)
+        self.assertEqual(
+            ordonnance.date_expiration, timezone.now().date() + datetime.timedelta(days=10)
+        )
+
+    def test_ordonnance_affichee_dans_dossier(self):
+        ordonnance = Ordonnance.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() + datetime.timedelta(days=30),
+        )
+        OrdonnanceLigne.objects.create(ordonnance=ordonnance, medicament="Ventoline", dosage="100µg")
+        response = self.client.get(reverse("consent:dossier_medecin", args=[self.patient.pk]))
+        self.assertContains(response, "Ventoline")
+
+
+class OrdonnanceAccesTests(TestCase):
+    """Créer une ordonnance exige un accès valide (sous exige_acces)."""
+
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def test_creation_ordonnance_sans_acces_bloquee(self):
+        response = self.client.post(
+            reverse("consent:ajouter_ordonnance", args=[self.patient.pk]),
+            {
+                "medicament": ["Paracétamol"],
+                "dosage": ["1000mg"],
+                "frequence": ["3x/jour"],
+                "duree": ["5 jours"],
+                "validite_jours": "90",
+            },
+        )
+        self.assertRedirects(response, reverse("consent:dossier_verrouille", args=[self.patient.pk]))
+        self.assertEqual(Ordonnance.objects.count(), 0)
+
+
+class OrdonnancePatientTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+
+    def _creer_ordonnance(self, jours=30, medicament="Paracétamol"):
+        ordonnance = Ordonnance.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() + datetime.timedelta(days=jours),
+        )
+        OrdonnanceLigne.objects.create(
+            ordonnance=ordonnance,
+            medicament=medicament,
+            dosage="1000mg",
+            frequence="3x/jour",
+            duree="5 jours",
+        )
+        return ordonnance
+
+    def test_mes_ordonnances_affiche_les_ordonnances(self):
+        self._creer_ordonnance(medicament="Amoxicilline")
+        response = self.client.get(reverse("consent:mes_ordonnances"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Amoxicilline")
+
+    def test_badge_active(self):
+        self._creer_ordonnance(jours=30)
+        response = self.client.get(reverse("consent:mes_ordonnances"))
+        self.assertContains(response, "Active")
+
+    def test_badge_expiree(self):
+        ordonnance = Ordonnance.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() - datetime.timedelta(days=1),
+        )
+        OrdonnanceLigne.objects.create(ordonnance=ordonnance, medicament="Vieuxmed", dosage="")
+        response = self.client.get(reverse("consent:mes_ordonnances"))
+        self.assertContains(response, "Expirée")
+
+    def test_mes_ordonnances_lecture_seule_avec_impression(self):
+        self._creer_ordonnance()
+        response = self.client.get(reverse("consent:mes_ordonnances"))
+        self.assertNotContains(response, "<form")
+        self.assertContains(response, "window.print()")
+
+    def test_patient_ne_voit_pas_ordonnances_dun_autre(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        ordonnance = Ordonnance.objects.create(
+            patient=autre_patient,
+            medecin=self.medecin_user,
+            date_expiration=timezone.now().date() + datetime.timedelta(days=30),
+        )
+        OrdonnanceLigne.objects.create(ordonnance=ordonnance, medicament="SecretMed", dosage="")
+        response = self.client.get(reverse("consent:mes_ordonnances"))
+        self.assertNotContains(response, "SecretMed")
