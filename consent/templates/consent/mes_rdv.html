@@ -1,0 +1,25 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+{% for r in rdvs %}
+<div class="card" style="margin-bottom:14px;{% if r.est_passe %}opacity:.75;{% else %}border-left:4px solid var(--teal);{% endif %}">
+  <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    <div style="border-radius:var(--rs);padding:11px 15px;text-align:center;min-width:64px;flex-shrink:0;{% if r.est_passe %}background:var(--mist);color:var(--slate){% else %}background:var(--teal);color:#fff{% endif %}">
+      <div style="font-size:.62rem;text-transform:uppercase;opacity:.8">{{ r.date|date:"M" }}</div>
+      <div style="font-family:var(--fh);font-size:1.75rem;font-weight:800;line-height:1">{{ r.date|date:"j" }}</div>
+    </div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:.93rem">{{ r.motif|default:"Rendez-vous" }}</div>
+      <div style="font-size:.8rem;color:var(--slate);margin-top:2px">🕘 {{ r.heure|time:"H:i" }}{% if r.medecin %} · 👨‍⚕️ Dr. {{ r.medecin.prenom }} {{ r.medecin.nom }}{% endif %}{% if r.salle %} · {{ r.salle }}{% endif %}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
+      {% if r.statut == 'annule' %}<span class="badge b-err">Annulé</span>{% elif r.est_passe %}<span class="badge b-gray">Passé</span>{% else %}<span class="badge b-ok">✅ Confirmé</span>{% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="empty" style="margin-top:40px"><div class="empty-ic">📅</div><div class="empty-t">Aucun rendez-vous</div></div>
+{% endfor %}
+{% endblock %}

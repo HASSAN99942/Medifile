@@ -1,0 +1,63 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+  <p style="color:var(--slate);font-size:.88rem">{{ resultats|length }} résultat(s)</p>
+</div>
+
+{% if erreurs %}
+<div class="card" style="border-left:4px solid var(--red);margin-bottom:16px">
+  {% for e in erreurs %}<div style="color:var(--red);font-size:.85rem">⚠️ {{ e }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-hdr"><div class="card-ttl">🧪 Saisir un résultat</div></div>
+  {% if patients %}
+  <form method="post" action="{% url 'consent:medecin_resultats' %}">
+    {% csrf_token %}
+    <div class="fgrid" style="margin-bottom:12px">
+      <div class="fg"><label class="lbl">Patient *</label><select class="fc" name="patient">{% for p in patients %}<option value="{{ p.pk }}">{{ p.user.prenom }} {{ p.user.nom }} — {{ p.numero_mf }}</option>{% endfor %}</select></div>
+      <div class="fg"><label class="lbl">Type</label><select class="fc" name="type">{% for val, lbl in types %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label class="lbl">Intitulé *</label><input class="fc" name="intitule" placeholder="Glycémie, NFS, Radio…"></div>
+    <div class="fgrid" style="margin-bottom:12px">
+      <div class="fg"><label class="lbl">Valeur</label><input class="fc" name="valeur" placeholder="1.20 g/L"></div>
+      <div class="fg"><label class="lbl">Référence</label><input class="fc" name="reference" placeholder="0.70–1.10 g/L"></div>
+    </div>
+    <div class="fgrid" style="margin-bottom:13px">
+      <div class="fg"><label class="lbl">Statut</label><select class="fc" name="statut">{% for val, lbl in statuts %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}</select></div>
+      <div class="fg"><label class="lbl">Laboratoire</label><input class="fc" name="laboratoire" placeholder="Nom du labo"></div>
+    </div>
+    <button class="btn btn-p" type="submit">Enregistrer le résultat</button>
+  </form>
+  {% else %}
+  <p style="color:var(--slate);font-size:.85rem">Aucun patient accessible. Ouvrez un dossier (avec accès valide) pour pouvoir saisir un résultat.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="tw">
+    <table>
+      <thead><tr><th>Date</th><th>Patient</th><th>Examen</th><th>Valeur</th><th>Statut</th><th>Labo</th><th></th></tr></thead>
+      <tbody>
+        {% for r in resultats %}
+        <tr>
+          <td style="font-size:.8rem">{{ r.date|date:"d/m/Y" }}</td>
+          <td><strong>{{ r.patient.user.prenom }} {{ r.patient.user.nom }}</strong></td>
+          <td>{{ r.intitule }}<br><span style="font-size:.7rem;color:var(--slate)">{{ r.get_type_display }}</span></td>
+          <td style="font-weight:600">{{ r.valeur|default:"—" }}</td>
+          <td><span class="badge {% if r.statut == 'normal' %}b-ok{% elif r.statut == 'bas' %}b-err{% else %}b-warn{% endif %}">{{ r.get_statut_display }}</span></td>
+          <td style="font-size:.78rem">{{ r.laboratoire|default:"—" }}</td>
+          <td><button class="btn btn-g btn-sm" onclick="location.href='{% url 'consent:dossier_medecin' r.patient.pk %}'">Dossier</button></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7"><div class="empty"><div class="empty-ic">🧪</div><div class="empty-t">Aucun résultat</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

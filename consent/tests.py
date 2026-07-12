@@ -7,7 +7,14 @@ from django.utils import timezone
 
 from accounts.models import Etablissement, User
 from audit.models import AuditLog
-from medical.models import Medecin, Ordonnance, OrdonnanceLigne, Patient
+from medical.models import (
+    Medecin,
+    Ordonnance,
+    OrdonnanceLigne,
+    Patient,
+    RendezVous,
+    Resultat,
+)
 
 from .access import a_acces_valide
 from .models import Acces, Consultation, DemandeAcces
@@ -739,3 +746,180 @@ class MedecinOrdonnancesListeTests(TestCase):
         self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
         response = self.client.get(reverse("consent:medecin_ordonnances"))
         self.assertEqual(response.status_code, 403)
+
+
+class ResultatMedecinTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.acces = Acces.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() + datetime.timedelta(hours=48),
+        )
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def test_page_accessible(self):
+        response = self.client.get(reverse("consent:medecin_resultats"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_saisir_resultat_pour_patient_accessible(self):
+        response = self.client.post(
+            reverse("consent:medecin_resultats"),
+            {
+                "patient": self.patient.pk,
+                "type": "biologie",
+                "intitule": "Glycémie",
+                "valeur": "1.20 g/L",
+                "reference": "0.70–1.10 g/L",
+                "statut": "eleve",
+                "laboratoire": "Labo Central",
+            },
+        )
+        self.assertRedirects(response, reverse("consent:medecin_resultats"))
+        resultat = Resultat.objects.get(patient=self.patient)
+        self.assertEqual(resultat.intitule, "Glycémie")
+        self.assertEqual(resultat.medecin, self.medecin_user)
+        self.assertEqual(resultat.statut, "eleve")
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action=AuditLog.Action.AJOUT_RESULTAT, patient_concerne=self.patient
+            ).exists()
+        )
+
+    def test_intitule_requis(self):
+        self.client.post(
+            reverse("consent:medecin_resultats"),
+            {"patient": self.patient.pk, "type": "biologie", "intitule": "", "statut": "normal"},
+        )
+        self.assertEqual(Resultat.objects.count(), 0)
+
+    def test_saisir_resultat_patient_non_accessible_refuse(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        self.client.post(
+            reverse("consent:medecin_resultats"),
+            {"patient": autre_patient.pk, "type": "biologie", "intitule": "Test", "statut": "normal"},
+        )
+        self.assertEqual(Resultat.objects.count(), 0)
+
+    def test_liste_scopee_aux_patients_accessibles(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        Resultat.objects.create(patient=autre_patient, medecin=self.medecin_user, intitule="CachéExamen")
+        Resultat.objects.create(patient=self.patient, medecin=self.medecin_user, intitule="VisibleExamen")
+        response = self.client.get(reverse("consent:medecin_resultats"))
+        self.assertContains(response, "VisibleExamen")
+        self.assertNotContains(response, "CachéExamen")
+
+    def test_patient_ne_peut_pas_acceder(self):
+        self.client.logout()
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+        response = self.client.get(reverse("consent:medecin_resultats"))
+        self.assertEqual(response.status_code, 403)
+
+
+class ResultatPatientTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+
+    def test_mes_resultats_lecture_seule(self):
+        Resultat.objects.create(patient=self.patient, medecin=self.medecin_user, intitule="Glycémie")
+        response = self.client.get(reverse("consent:mes_resultats"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Glycémie")
+        self.assertNotContains(response, "<form")
+
+    def test_patient_ne_voit_pas_resultats_dun_autre(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        Resultat.objects.create(patient=autre_patient, medecin=self.medecin_user, intitule="SecretExamen")
+        response = self.client.get(reverse("consent:mes_resultats"))
+        self.assertNotContains(response, "SecretExamen")
+
+
+class RendezVousMedecinTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.acces = Acces.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            source=Acces.Source.DEMANDE,
+            expire_le=timezone.now() + datetime.timedelta(hours=48),
+        )
+        self.client.login(username=self.medecin_user.username, password="MotDePasseMedecin123")
+
+    def test_page_accessible(self):
+        response = self.client.get(reverse("consent:medecin_rdv"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_creer_rdv_pour_patient_accessible(self):
+        demain = (timezone.now().date() + datetime.timedelta(days=1)).isoformat()
+        response = self.client.post(
+            reverse("consent:medecin_rdv"),
+            {
+                "patient": self.patient.pk,
+                "date": demain,
+                "heure": "09:30",
+                "motif": "Suivi diabète",
+                "salle": "Salle 3",
+            },
+        )
+        self.assertRedirects(response, reverse("consent:medecin_rdv"))
+        rdv = RendezVous.objects.get(patient=self.patient)
+        self.assertEqual(rdv.motif, "Suivi diabète")
+        self.assertEqual(rdv.medecin, self.medecin_user)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action=AuditLog.Action.AJOUT_RENDEZVOUS, patient_concerne=self.patient
+            ).exists()
+        )
+
+    def test_date_invalide_refusee(self):
+        self.client.post(
+            reverse("consent:medecin_rdv"),
+            {"patient": self.patient.pk, "date": "", "heure": "", "motif": "X"},
+        )
+        self.assertEqual(RendezVous.objects.count(), 0)
+
+    def test_creer_rdv_patient_non_accessible_refuse(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        demain = (timezone.now().date() + datetime.timedelta(days=1)).isoformat()
+        self.client.post(
+            reverse("consent:medecin_rdv"),
+            {"patient": autre_patient.pk, "date": demain, "heure": "09:30", "motif": "X"},
+        )
+        self.assertEqual(RendezVous.objects.count(), 0)
+
+
+class RendezVousPatientTests(TestCase):
+    def setUp(self):
+        self.medecin_user, self.medecin = creer_medecin()
+        self.patient_user, self.patient = creer_patient()
+        self.client.login(username=self.patient_user.username, password="MotDePassePatient123")
+
+    def test_mes_rdv_lecture_seule(self):
+        RendezVous.objects.create(
+            patient=self.patient,
+            medecin=self.medecin_user,
+            date=timezone.now().date() + datetime.timedelta(days=2),
+            heure=datetime.time(9, 15),
+            motif="Contrôle annuel",
+        )
+        response = self.client.get(reverse("consent:mes_rdv"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Contrôle annuel")
+        self.assertNotContains(response, "<form")
+
+    def test_patient_ne_voit_pas_rdv_dun_autre(self):
+        _, autre_patient = creer_patient(prenom="Awa", nom="Ngoma", numero_mf="MF-2026-000002")
+        RendezVous.objects.create(
+            patient=autre_patient,
+            medecin=self.medecin_user,
+            date=timezone.now().date() + datetime.timedelta(days=2),
+            heure=datetime.time(10, 0),
+            motif="RdvSecret",
+        )
+        response = self.client.get(reverse("consent:mes_rdv"))
+        self.assertNotContains(response, "RdvSecret")

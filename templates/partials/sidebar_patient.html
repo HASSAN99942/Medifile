@@ -9,8 +9,8 @@
     <button class="ni{% if active == 'p-home' %} act{% endif %}" onclick="location.href='{% url 'core:home' %}'"><span class="ic">🏠</span>Mon tableau de bord</button>
     <button class="ni{% if active == 'p-histo' %} act{% endif %}" onclick="location.href='{% url 'consent:dossier_patient' %}'"><span class="ic">📋</span>Mon historique</button>
     <button class="ni{% if active == 'p-ordos' %} act{% endif %}" onclick="location.href='{% url 'consent:mes_ordonnances' %}'"><span class="ic">💊</span>Mes ordonnances</button>
-    <button class="ni{% if active == 'p-results' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🧪</span>Mes résultats</button>
-    <button class="ni{% if active == 'p-rdv' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📅</span>Mes rendez-vous</button>
+    <button class="ni{% if active == 'p-results' %} act{% endif %}" onclick="location.href='{% url 'consent:mes_resultats' %}'"><span class="ic">🧪</span>Mes résultats</button>
+    <button class="ni{% if active == 'p-rdv' %} act{% endif %}" onclick="location.href='{% url 'consent:mes_rdv' %}'"><span class="ic">📅</span>Mes rendez-vous</button>
     <button class="ni{% if active == 'p-docs' %} act{% endif %}" onclick="location.href='#'"><span class="ic">📄</span>Mes documents</button>
     <button class="ni{% if active == 'p-acces' %} act{% endif %}" onclick="location.href='{% url 'consent:mes_acces' %}'"><span class="ic">🔐</span>Accès &amp; Consentements{% if nb_demandes %}<span class="nb">{{ nb_demandes }}</span>{% endif %}</button>
     <div class="s-sect" style="margin-top:10px">Compte</div>

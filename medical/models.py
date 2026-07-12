@@ -137,3 +137,90 @@ class OrdonnanceLigne(models.Model):
 
     def __str__(self):
         return f"{self.medicament} {self.dosage}".strip()
+
+
+class Resultat(models.Model):
+    """Résultat d'examen saisi par un médecin ayant un accès valide. Lecture seule côté patient."""
+
+    class Type(models.TextChoices):
+        BIOLOGIE = "biologie", _("Biologie")
+        IMAGERIE = "imagerie", _("Imagerie")
+        MICROBIOLOGIE = "microbiologie", _("Microbiologie")
+
+    class Statut(models.TextChoices):
+        NORMAL = "normal", _("Normal")
+        LIMITE = "limite", _("Limite")
+        ELEVE = "eleve", _("Élevé")
+        BAS = "bas", _("Bas")
+
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="resultats", verbose_name=_("patient")
+    )
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="resultats_saisis",
+        verbose_name=_("médecin"),
+    )
+    date = models.DateField(_("date"), auto_now_add=True)
+    type = models.CharField(_("type"), max_length=15, choices=Type.choices, default=Type.BIOLOGIE)
+    intitule = models.CharField(_("intitulé"), max_length=200)
+    valeur = models.CharField(_("valeur"), max_length=100, blank=True)
+    reference = models.CharField(_("référence"), max_length=100, blank=True)
+    statut = models.CharField(_("statut"), max_length=10, choices=Statut.choices, default=Statut.NORMAL)
+    laboratoire = models.CharField(_("laboratoire"), max_length=150, blank=True)
+
+    class Meta:
+        verbose_name = _("résultat d'examen")
+        verbose_name_plural = _("résultats d'examen")
+        ordering = ["-date", "-id"]
+
+    @property
+    def palette(self):
+        """Couleurs d'affichage selon le statut (identique au cMap de legacy/js/patient.js)."""
+        if self.statut == self.Statut.NORMAL:
+            return {"bg": "#F0FFF4", "border": "#9AE6B4", "color": "#276749", "ic": "✅"}
+        if self.statut == self.Statut.BAS:
+            return {"bg": "#FFF5F5", "border": "#FEB2B2", "color": "#822727", "ic": "🔴"}
+        return {"bg": "#FFFBEB", "border": "#F6E05E", "color": "#744210", "ic": "⚠️"}
+
+    def __str__(self):
+        return f"{self.intitule} — {self.patient}"
+
+
+class RendezVous(models.Model):
+    """Rendez-vous planifié par un médecin pour un patient auquel il a accès."""
+
+    class Statut(models.TextChoices):
+        CONFIRME = "confirme", _("Confirmé")
+        ANNULE = "annule", _("Annulé")
+
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="rendezvous", verbose_name=_("patient")
+    )
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="rendezvous_planifies",
+        verbose_name=_("médecin"),
+    )
+    date = models.DateField(_("date"))
+    heure = models.TimeField(_("heure"))
+    motif = models.CharField(_("motif"), max_length=200, blank=True)
+    salle = models.CharField(_("salle"), max_length=50, blank=True)
+    statut = models.CharField(_("statut"), max_length=10, choices=Statut.choices, default=Statut.CONFIRME)
+    date_creation = models.DateTimeField(_("date de création"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("rendez-vous")
+        verbose_name_plural = _("rendez-vous")
+        ordering = ["-date", "-heure"]
+
+    @property
+    def est_passe(self):
+        return self.date < datetime.date.today()
+
+    def __str__(self):
+        return f"{self.date} {self.heure:%H:%M} — {self.patient}"

@@ -1,0 +1,54 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+{% if erreurs %}
+<div class="card" style="border-left:4px solid var(--red);margin-bottom:16px">
+  {% for e in erreurs %}<div style="color:var(--red);font-size:.85rem">⚠️ {{ e }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-hdr"><div class="card-ttl">📅 Nouveau rendez-vous</div></div>
+  {% if patients %}
+  <form method="post" action="{% url 'consent:medecin_rdv' %}">
+    {% csrf_token %}
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Patient *</label><select class="fc" name="patient">{% for p in patients %}<option value="{{ p.pk }}">{{ p.user.prenom }} {{ p.user.nom }} — {{ p.numero_mf }}</option>{% endfor %}</select></div>
+    <div class="fgrid" style="margin-bottom:13px">
+      <div class="fg"><label class="lbl">Date *</label><input type="date" class="fc" name="date" value="{{ aujourdhui }}" min="{{ aujourdhui }}"></div>
+      <div class="fg"><label class="lbl">Heure *</label><input type="time" class="fc" name="heure" value="09:00"></div>
+    </div>
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Motif</label><input class="fc" name="motif" placeholder="Suivi, bilan, renouvellement…"></div>
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Salle</label><input class="fc" name="salle" placeholder="Salle 1, Téléconsultation…"></div>
+    <button class="btn btn-p" type="submit">Créer le rendez-vous</button>
+  </form>
+  {% else %}
+  <p style="color:var(--slate);font-size:.85rem">Aucun patient accessible. Ouvrez un dossier (avec accès valide) pour planifier un rendez-vous.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-hdr"><div class="card-ttl">Planning ({{ rdvs|length }} RDV)</div></div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Date</th><th>Heure</th><th>Patient</th><th>Motif</th><th>Salle</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rdvs %}
+        <tr{% if r.est_passe %} style="opacity:.7"{% endif %}>
+          <td style="font-size:.83rem">{{ r.date|date:"d/m/Y" }}</td>
+          <td><strong style="font-family:var(--fh)">{{ r.heure|time:"H:i" }}</strong></td>
+          <td><strong>{{ r.patient.user.prenom }} {{ r.patient.user.nom }}</strong></td>
+          <td style="color:var(--slate)">{{ r.motif|default:"—" }}</td>
+          <td>{% if r.salle %}<span class="badge b-teal">{{ r.salle }}</span>{% else %}—{% endif %}</td>
+          <td>{% if r.statut == 'annule' %}<span class="badge b-err">Annulé</span>{% elif r.est_passe %}<span class="badge b-gray">Passé</span>{% else %}<span class="badge b-ok">✅ Confirmé</span>{% endif %}</td>
+          <td><button class="btn btn-g btn-sm" onclick="location.href='{% url 'consent:dossier_medecin' r.patient.pk %}'">Dossier</button></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7"><div class="empty"><div class="empty-ic">📅</div><div class="empty-t">Aucun rendez-vous</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

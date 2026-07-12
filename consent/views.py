@@ -1,3 +1,4 @@
+import datetime
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404, redirect, render
@@ -5,12 +6,20 @@ from django.utils import timezone
 
 from accounts.decorators import role_required
 from audit.models import AuditLog, log_action
-from medical.models import Ordonnance, OrdonnanceLigne, Patient
+from medical.models import Ordonnance, OrdonnanceLigne, Patient, RendezVous, Resultat
 
 from .access import a_acces_valide, exige_acces
 from .models import DUREE_CHOICES, Acces, Consultation, DemandeAcces
 
 DUREE_VALIDITE_ORDONNANCE_JOURS = 90
+
+
+def _patients_accessibles_ids(medecin):
+    """IDs des patients auxquels le médecin a un accès valide en ce moment
+    (vérifié à chaque requête, comme la règle de consentement)."""
+    return Acces.objects.filter(
+        medecin=medecin, revoque=False, expire_le__gt=timezone.now()
+    ).values_list("patient_id", flat=True)
 
 # ── PATIENT ────────────────────────────────────────────────
 
@@ -137,26 +146,160 @@ def mes_ordonnances(request):
     )
 
 
+@role_required("patient")
+def mes_resultats(request):
+    patient = request.user.patient
+    resultats = Resultat.objects.filter(patient=patient).order_by("-date", "-id")
+    return render(
+        request,
+        "consent/mes_resultats.html",
+        {"page_title": "Mes résultats", "active": "p-results", "resultats": resultats},
+    )
+
+
+@role_required("patient")
+def mes_rdv(request):
+    patient = request.user.patient
+    rdvs = RendezVous.objects.select_related("medecin").filter(patient=patient).order_by("-date", "-heure")
+    return render(
+        request,
+        "consent/mes_rdv.html",
+        {"page_title": "Mes rendez-vous", "active": "p-rdv", "rdvs": rdvs},
+    )
+
+
 # ── MÉDECIN ────────────────────────────────────────────────
 
 
 @role_required("medecin")
 def medecin_ordonnances(request):
-    # Scopé aux patients auxquels le médecin a un accès valide en ce moment
-    # (vérifié à chaque requête, comme la règle de consentement).
-    patients_accessibles = Acces.objects.filter(
-        medecin=request.user, revoque=False, expire_le__gt=timezone.now()
-    ).values_list("patient_id", flat=True)
+    # Scopé aux patients auxquels le médecin a un accès valide en ce moment.
     ordonnances = (
         Ordonnance.objects.select_related("patient__user", "medecin")
         .prefetch_related("lignes")
-        .filter(patient_id__in=patients_accessibles)
+        .filter(patient_id__in=_patients_accessibles_ids(request.user))
         .order_by("-date", "-id")
     )
     return render(
         request,
         "consent/medecin_ordonnances.html",
         {"page_title": "Ordonnances", "active": "d-ordos", "ordonnances": ordonnances},
+    )
+
+
+@role_required("medecin")
+def medecin_resultats(request):
+    patients_accessibles = Patient.objects.select_related("user").filter(
+        id__in=_patients_accessibles_ids(request.user)
+    )
+    erreurs = []
+    if request.method == "POST":
+        intitule = request.POST.get("intitule", "").strip()
+        try:
+            patient = patients_accessibles.get(pk=request.POST.get("patient"))
+        except (Patient.DoesNotExist, ValueError, TypeError):
+            patient = None
+            erreurs.append("Patient invalide ou accès non autorisé.")
+        if not intitule:
+            erreurs.append("L'intitulé de l'examen est requis.")
+        if patient and intitule:
+            type_examen = request.POST.get("type", Resultat.Type.BIOLOGIE)
+            statut = request.POST.get("statut", Resultat.Statut.NORMAL)
+            if type_examen not in dict(Resultat.Type.choices):
+                type_examen = Resultat.Type.BIOLOGIE
+            if statut not in dict(Resultat.Statut.choices):
+                statut = Resultat.Statut.NORMAL
+            Resultat.objects.create(
+                patient=patient,
+                medecin=request.user,
+                type=type_examen,
+                intitule=intitule,
+                valeur=request.POST.get("valeur", "").strip(),
+                reference=request.POST.get("reference", "").strip(),
+                statut=statut,
+                laboratoire=request.POST.get("laboratoire", "").strip(),
+            )
+            log_action(
+                AuditLog.Action.AJOUT_RESULTAT,
+                request=request,
+                user=request.user,
+                patient_concerne=patient,
+                detail=f"{patient.user.prenom} {patient.user.nom} — {intitule}",
+            )
+            return redirect("consent:medecin_resultats")
+
+    resultats = (
+        Resultat.objects.select_related("patient__user")
+        .filter(patient_id__in=_patients_accessibles_ids(request.user))
+        .order_by("-date", "-id")
+    )
+    return render(
+        request,
+        "consent/medecin_resultats.html",
+        {
+            "page_title": "Résultats",
+            "active": "d-results",
+            "resultats": resultats,
+            "patients": patients_accessibles,
+            "types": Resultat.Type.choices,
+            "statuts": Resultat.Statut.choices,
+            "erreurs": erreurs,
+        },
+    )
+
+
+@role_required("medecin")
+def medecin_rdv(request):
+    patients_accessibles = Patient.objects.select_related("user").filter(
+        id__in=_patients_accessibles_ids(request.user)
+    )
+    erreurs = []
+    if request.method == "POST":
+        try:
+            patient = patients_accessibles.get(pk=request.POST.get("patient"))
+        except (Patient.DoesNotExist, ValueError, TypeError):
+            patient = None
+            erreurs.append("Patient invalide ou accès non autorisé.")
+        try:
+            date = datetime.date.fromisoformat(request.POST.get("date", ""))
+            heure = datetime.time.fromisoformat(request.POST.get("heure", ""))
+        except ValueError:
+            date = heure = None
+            erreurs.append("Date et heure valides requises.")
+        if patient and date and heure:
+            RendezVous.objects.create(
+                patient=patient,
+                medecin=request.user,
+                date=date,
+                heure=heure,
+                motif=request.POST.get("motif", "").strip(),
+                salle=request.POST.get("salle", "").strip(),
+            )
+            log_action(
+                AuditLog.Action.AJOUT_RENDEZVOUS,
+                request=request,
+                user=request.user,
+                patient_concerne=patient,
+                detail=f"{patient.user.prenom} {patient.user.nom} — {date:%d/%m/%Y} {heure:%H:%M}",
+            )
+            return redirect("consent:medecin_rdv")
+
+    rdvs = (
+        RendezVous.objects.select_related("patient__user")
+        .filter(patient_id__in=_patients_accessibles_ids(request.user))
+        .order_by("-date", "-heure")
+    )
+    return render(
+        request,
+        "consent/medecin_rdv.html",
+        {
+            "page_title": "Rendez-vous",
+            "active": "d-rdv",
+            "rdvs": rdvs,
+            "patients": patients_accessibles,
+            "erreurs": erreurs,
+            "aujourdhui": datetime.date.today().isoformat(),
+        },
     )
 
 

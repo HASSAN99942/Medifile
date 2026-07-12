@@ -1,0 +1,41 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_patient.html" %}{% endblock %}
+
+{% block content %}
+<div style="background:var(--teal-pale);border-radius:var(--rs);padding:11px 15px;margin-bottom:22px;font-size:.83rem;color:var(--teal)">
+  ℹ️ Ces résultats ont été interprétés par votre médecin. En cas de doute, parlez-en lors de votre prochain RDV.
+</div>
+{% if resultats %}
+<div style="display:grid;gap:14px">
+  {% for r in resultats %}
+  <div class="card" style="border:2px solid {{ r.palette.border }}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:13px">
+      <div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="font-family:var(--fh);font-weight:700;font-size:1rem">{{ r.intitule }}</div>
+          <span class="badge" style="background:{{ r.palette.bg }};color:{{ r.palette.color }}">{{ r.palette.ic }} {{ r.get_statut_display }}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--slate)">📅 {{ r.date|date:"d/m/Y" }} · 🏥 {{ r.laboratoire|default:"—" }} · {{ r.get_type_display }}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:4px">
+      <div style="background:{{ r.palette.bg }};border-radius:var(--rs);padding:13px;text-align:center">
+        <div style="font-size:.68rem;color:{{ r.palette.color }};font-weight:700;text-transform:uppercase;margin-bottom:3px">Votre valeur</div>
+        <div style="font-family:var(--fh);font-size:1.5rem;font-weight:800;color:{{ r.palette.color }}">{{ r.valeur|default:"—" }}</div>
+      </div>
+      <div style="background:var(--mist);border-radius:var(--rs);padding:13px;text-align:center">
+        <div style="font-size:.68rem;color:var(--slate);font-weight:700;text-transform:uppercase;margin-bottom:3px">Valeur normale</div>
+        <div style="font-family:var(--fh);font-size:1.1rem;font-weight:700;color:var(--slate)">{{ r.reference|default:"—" }}</div>
+      </div>
+    </div>
+    <div style="margin-top:11px;padding:9px 13px;background:{{ r.palette.bg }};border-radius:var(--rs);font-size:.8rem;color:{{ r.palette.color }}">
+      {% if r.statut == 'normal' %}✅ Ce résultat est dans la normale. Continuez comme ça !{% else %}💬 Votre médecin a pris connaissance de ce résultat. Parlez-en lors de votre prochain RDV.{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty"><div class="empty-ic">🧪</div><div class="empty-t">Aucun résultat disponible</div></div>
+{% endif %}
+{% endblock %}
