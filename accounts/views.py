@@ -84,15 +84,33 @@ def login_view(request):
     if request.method == "POST":
         identifiant = request.POST.get("identifiant", "").strip()
         password = request.POST.get("password", "")
+        role_choisi = request.POST.get("role", "")
         user = authenticate(request, username=identifiant, password=password)
 
-        if user is not None and user.actif:
-            auth_login(request, user)
-            log_action(AuditLog.Action.LOGIN, request=request, user=user)
-            if user.doit_changer_mdp:
-                return redirect("accounts:changer_mdp")
-            return redirect("core:home")
-        elif user is not None and not user.actif:
+        # Libellés des rôles (« Médecin » → « médecin ») pour le message d'erreur.
+        libelles_roles = {role.value: str(role.label).lower() for role in User.Role}
+
+        if user is None:
+            # Ne révèle jamais si l'identifiant existe.
+            error = "Identifiant ou mot de passe incorrect."
+            log_action(
+                AuditLog.Action.LOGIN_ECHEC,
+                request=request,
+                identifiant_saisi=identifiant,
+                detail="Échec d'authentification",
+            )
+        elif user.role != role_choisi:
+            # Identifiants valides mais rôle sélectionné incorrect : on refuse.
+            libelle = libelles_roles.get(role_choisi, "valide")
+            error = f"Ce compte n'est pas un compte {libelle}."
+            log_action(
+                AuditLog.Action.LOGIN_ECHEC,
+                request=request,
+                user=user,
+                identifiant_saisi=identifiant,
+                detail="mauvais rôle",
+            )
+        elif not user.actif:
             error = "Ce compte a été désactivé. Contactez votre administrateur."
             log_action(
                 AuditLog.Action.LOGIN_ECHEC,
@@ -102,13 +120,11 @@ def login_view(request):
                 detail="Compte désactivé",
             )
         else:
-            error = "Identifiant ou mot de passe incorrect."
-            log_action(
-                AuditLog.Action.LOGIN_ECHEC,
-                request=request,
-                identifiant_saisi=identifiant,
-                detail="Échec d'authentification",
-            )
+            auth_login(request, user)
+            log_action(AuditLog.Action.LOGIN, request=request, user=user)
+            if user.doit_changer_mdp:
+                return redirect("accounts:changer_mdp")
+            return redirect("core:home")
 
     return render(request, "accounts/login.html", {"error": error, "identifiant": identifiant})
 

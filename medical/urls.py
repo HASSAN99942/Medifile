@@ -28,3 +28,4 @@ urlpatterns = [
         name="medecin_patient_fiche",
     ),
 ]
+

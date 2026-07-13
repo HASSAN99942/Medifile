@@ -446,7 +446,7 @@ class ScenarioCompletTests(TestCase):
         # 4. Le patient se connecte, doit changer son mot de passe, voit la demande, et l'approuve.
         login_resp = self.client.post(
             reverse("accounts:login"),
-            {"identifiant": numero_mf, "password": mot_de_passe_provisoire},
+            {"identifiant": numero_mf, "password": mot_de_passe_provisoire, "role": "patient"},
         )
         self.assertRedirects(login_resp, reverse("accounts:changer_mdp"))
         self.client.post(
