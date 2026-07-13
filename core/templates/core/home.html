@@ -8,10 +8,9 @@
   <span class="badge b-teal" style="margin-left:10px">🏥 {{ etablissement }}</span>
 </p>
 <div class="sgrid">
-  <div class="scard sc-teal"><div class="s-lbl">Mes patients</div><div class="s-val">0</div><div class="s-sub">Suivis actifs</div><div class="s-ico">👥</div></div>
-  <div class="scard sc-gold"><div class="s-lbl">RDV aujourd'hui</div><div class="s-val">0</div><div class="s-sub">Premier à —</div><div class="s-ico">📅</div></div>
-  <div class="scard sc-green"><div class="s-lbl">Cas critiques</div><div class="s-val">0</div><div class="s-sub">Aucun urgent</div><div class="s-ico">🚨</div></div>
-  <div class="scard sc-blue"><div class="s-lbl">Surveillance</div><div class="s-val">0</div><div class="s-sub">Suivi rapproché</div><div class="s-ico">👁️</div></div>
+  {% for c in cartes %}
+  <div class="scard {{ c.cls }}"><div class="s-lbl">{{ c.label }}</div><div class="s-val">{{ c.value }}</div><div class="s-sub">{{ c.sub }}</div><div class="s-ico">{{ c.ico }}</div></div>
+  {% endfor %}
 </div>
 <div class="card">
   <div class="card-hdr">
