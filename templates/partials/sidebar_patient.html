@@ -19,7 +19,7 @@
     <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">
-    <div class="u-chip">
+    <div class="u-chip" style="cursor:pointer" title="Mon profil" onclick="location.href='{% url 'consent:mon_profil' %}'">
       <div class="av" style="background:var(--gold)">{{ avatar|default:"PT" }}</div>
       <div><div class="u-name">{{ nom_complet|default:"Patient" }}</div><div class="u-role">Patient · {{ etablissement|default:"—" }}</div></div>
     </div>

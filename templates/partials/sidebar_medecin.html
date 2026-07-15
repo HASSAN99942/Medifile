@@ -17,7 +17,7 @@
     <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">
-    <div class="u-chip">
+    <div class="u-chip" style="cursor:pointer" title="Paramètres" onclick="location.href='{% url 'accounts:parametres' %}'">
       <div class="av">{{ avatar|default:"MD" }}</div>
       <div><div class="u-name">{{ nom_complet|default:"Médecin" }}</div><div class="u-role">{{ specialite|default:"—" }}</div></div>
     </div>
