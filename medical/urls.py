@@ -20,6 +20,18 @@ urlpatterns = [
     ),
     path("patients-inscrits/", views.admin_patients, name="admin_patients"),
     path("statistiques/", views.admin_stats, name="admin_stats"),
+    path("etablissement-gestion/", views.admin_etablissement, name="admin_etablissement"),
+    path("etablissement-gestion/service/creer/", views.admin_service_creer, name="admin_service_creer"),
+    path(
+        "etablissement-gestion/service/<int:pk>/modifier/",
+        views.admin_service_modifier,
+        name="admin_service_modifier",
+    ),
+    path(
+        "etablissement-gestion/service/<int:pk>/supprimer/",
+        views.admin_service_supprimer,
+        name="admin_service_supprimer",
+    ),
     path("mes-patients/", views.medecin_patients, name="medecin_patients"),
     path("mes-patients/creer/", views.medecin_patient_creer, name="medecin_patient_creer"),
     path(

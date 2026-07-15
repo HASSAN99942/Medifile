@@ -9,7 +9,7 @@
     <button class="ni{% if active == 'a-home' %} act{% endif %}" onclick="location.href='{% url 'core:home' %}'"><span class="ic">🏠</span>Vue d'ensemble</button>
     <button class="ni{% if active == 'a-medecins' %} act{% endif %}" onclick="location.href='{% url 'medical:admin_medecins' %}'"><span class="ic">👨‍⚕️</span>Médecins</button>
     <button class="ni{% if active == 'a-patients' %} act{% endif %}" onclick="location.href='{% url 'medical:admin_patients' %}'"><span class="ic">👥</span>Patients</button>
-    <button class="ni{% if active == 'a-hopital' %} act{% endif %}" onclick="location.href='#'"><span class="ic">🏥</span>Mon établissement</button>
+    <button class="ni{% if active == 'a-hopital' %} act{% endif %}" onclick="location.href='{% url 'medical:admin_etablissement' %}'"><span class="ic">🏥</span>Mon établissement</button>
     <button class="ni{% if active == 'a-stats' %} act{% endif %}" onclick="location.href='{% url 'medical:admin_stats' %}'"><span class="ic">📊</span>Statistiques</button>
     <div class="s-sect" style="margin-top:10px">Compte</div>
     <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>

@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import Service, User
+
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ("nom", "statut", "etablissement")
+    list_filter = ("statut",)
+    search_fields = ("nom",)
 
 
 @admin.register(User)

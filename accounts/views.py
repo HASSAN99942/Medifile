@@ -8,7 +8,7 @@ from django.utils import translation
 from audit.models import AuditLog, log_action
 
 from .decorators import role_required
-from .models import Etablissement, User
+from .models import Etablissement, Service, User
 
 
 def installation(request):
@@ -222,6 +222,23 @@ def parametres(request):
             "medecin": medecin,
             "etablissement": Etablissement.get(),
             "langues": User.Langue.choices,
+        },
+    )
+
+
+@role_required("medecin")
+def etablissement_medecin(request):
+    """Page « Mon établissement » du médecin — LECTURE SEULE (aucune modification)."""
+    etablissement = Etablissement.get()
+    services = Service.objects.filter(etablissement=etablissement) if etablissement else Service.objects.none()
+    return render(
+        request,
+        "accounts/etablissement_medecin.html",
+        {
+            "page_title": "Mon établissement",
+            "active": "d-etab",
+            "etablissement": etablissement,
+            "services": services,
         },
     )
 

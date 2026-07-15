@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import role_required
-from accounts.models import User
+from accounts.models import Etablissement, Service, User
 from audit.models import AuditLog, log_action
 from consent.access import a_acces_valide
 from consent.models import Acces
@@ -181,6 +181,70 @@ def admin_stats(request):
         "nb_audit_total": AuditLog.objects.count(),
     }
     return render(request, "medical/admin_stats.html", context)
+
+
+# ── ADMIN : ÉTABLISSEMENT & SERVICES (seul rôle pouvant modifier) ──
+
+
+@role_required("admin")
+def admin_etablissement(request):
+    etablissement = Etablissement.get()
+    services = (
+        Service.objects.filter(etablissement=etablissement) if etablissement else Service.objects.none()
+    )
+    return render(
+        request,
+        "medical/admin_etablissement.html",
+        {
+            "page_title": "Mon établissement",
+            "active": "a-hopital",
+            "etablissement": etablissement,
+            "services": services,
+            "statuts": Service.Statut.choices,
+        },
+    )
+
+
+@role_required("admin")
+def admin_service_creer(request):
+    if request.method == "POST":
+        etablissement = Etablissement.get()
+        nom = request.POST.get("nom", "").strip()
+        statut = request.POST.get("statut", Service.Statut.OUVERT)
+        if statut not in dict(Service.Statut.choices):
+            statut = Service.Statut.OUVERT
+        if etablissement and nom:
+            Service.objects.create(
+                etablissement=etablissement,
+                nom=nom,
+                statut=statut,
+                description=request.POST.get("description", "").strip(),
+            )
+    return redirect("medical:admin_etablissement")
+
+
+@role_required("admin")
+def admin_service_modifier(request, pk):
+    service = get_object_or_404(Service, pk=pk)
+    if request.method == "POST":
+        nom = request.POST.get("nom", "").strip()
+        statut = request.POST.get("statut", service.statut)
+        if statut not in dict(Service.Statut.choices):
+            statut = service.statut
+        if nom:
+            service.nom = nom
+        service.statut = statut
+        service.description = request.POST.get("description", "").strip()
+        service.save()
+    return redirect("medical:admin_etablissement")
+
+
+@role_required("admin")
+def admin_service_supprimer(request, pk):
+    service = get_object_or_404(Service, pk=pk)
+    if request.method == "POST":
+        service.delete()
+    return redirect("medical:admin_etablissement")
 
 
 # ── MÉDECIN : PATIENTS ──

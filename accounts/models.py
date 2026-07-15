@@ -66,3 +66,28 @@ class Etablissement(models.Model):
 
     def __str__(self):
         return self.nom
+
+
+class Service(models.Model):
+    """Service de l'établissement (cardiologie, urgences…). Géré par l'admin uniquement ;
+    consulté en lecture seule par le médecin."""
+
+    class Statut(models.TextChoices):
+        OUVERT = "ouvert", _("Ouvert")
+        FERME = "ferme", _("Fermé")
+        MAINTENANCE = "maintenance", _("Maintenance")
+
+    etablissement = models.ForeignKey(
+        Etablissement, on_delete=models.CASCADE, related_name="services", verbose_name=_("établissement")
+    )
+    nom = models.CharField(_("nom"), max_length=150)
+    statut = models.CharField(_("statut"), max_length=12, choices=Statut.choices, default=Statut.OUVERT)
+    description = models.TextField(_("description"), blank=True)
+
+    class Meta:
+        verbose_name = _("service")
+        verbose_name_plural = _("services")
+        ordering = ["nom"]
+
+    def __str__(self):
+        return self.nom

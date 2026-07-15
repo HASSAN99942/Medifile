@@ -5,7 +5,7 @@ from django.urls import reverse
 from audit.models import AuditLog
 from medical.models import Medecin
 
-from .models import Etablissement, User
+from .models import Etablissement, Service, User
 
 
 class LoginRoleTests(TestCase):
@@ -161,3 +161,50 @@ class ParametresMedecinTests(TestCase):
         self.assertContains(response, "actuel est incorrect")
         self.medecin.refresh_from_db()
         self.assertTrue(self.medecin.check_password("MotDePasseMedecin123"))
+
+
+class EtablissementMedecinTests(TestCase):
+    def setUp(self):
+        self.etablissement = Etablissement.objects.create(
+            nom="CHU Test", ville="Douala", telephone="+237 690 00 00 00", email="contact@chu.cm"
+        )
+        self.medecin = User.objects.create_user(
+            username="doc@chu.cm",
+            email="doc@chu.cm",
+            password="MotDePasseMedecin123",
+            prenom="Amara",
+            nom="Kone",
+            role=User.Role.MEDECIN,
+            actif=True,
+        )
+        Service.objects.create(etablissement=self.etablissement, nom="Cardiologie", statut="ouvert")
+        Service.objects.create(etablissement=self.etablissement, nom="Bloc opératoire", statut="maintenance")
+        Service.objects.create(etablissement=self.etablissement, nom="Radiologie", statut="ferme")
+        self.client.login(username="doc@chu.cm", password="MotDePasseMedecin123")
+
+    def test_page_lecture_seule(self):
+        response = self.client.get(reverse("accounts:etablissement_medecin"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CHU Test")
+        self.assertContains(response, "Cardiologie")
+        # Lecture seule : aucun formulaire de modification.
+        self.assertNotContains(response, "<form")
+
+    def test_badges_de_statut_colores(self):
+        response = self.client.get(reverse("accounts:etablissement_medecin"))
+        self.assertContains(response, "b-ok")  # ouvert
+        self.assertContains(response, "b-warn")  # maintenance
+        self.assertContains(response, "b-err")  # fermé
+
+    def test_admin_ne_peut_pas_acceder_page_medecin(self):
+        User.objects.create_user(
+            username="admin@chu.cm",
+            email="admin@chu.cm",
+            password="MotDePasseAdmin123",
+            role=User.Role.ADMIN,
+            actif=True,
+        )
+        self.client.logout()
+        self.client.login(username="admin@chu.cm", password="MotDePasseAdmin123")
+        response = self.client.get(reverse("accounts:etablissement_medecin"))
+        self.assertEqual(response.status_code, 403)

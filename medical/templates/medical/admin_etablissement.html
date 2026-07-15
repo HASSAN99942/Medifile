@@ -1,0 +1,58 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:18px">
+  <div class="card-ttl" style="margin-bottom:14px">🏥 {{ etablissement.nom|default:"Établissement" }}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">📍 Ville</div><div style="font-weight:600;font-size:.85rem">{{ etablissement.ville|default:"—" }}</div></div>
+    <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">📞 Téléphone</div><div style="font-weight:600;font-size:.85rem">{{ etablissement.telephone|default:"—" }}</div></div>
+    <div style="background:var(--mist);padding:11px;border-radius:var(--rs)"><div style="font-size:.68rem;color:var(--slate);text-transform:uppercase;font-weight:700;margin-bottom:3px">✉️ Email</div><div style="font-weight:600;font-size:.85rem">{{ etablissement.email|default:"—" }}</div></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-hdr"><div class="card-ttl">➕ Ajouter un service</div></div>
+  <form method="post" action="{% url 'medical:admin_service_creer' %}">
+    {% csrf_token %}
+    <div class="fgrid" style="margin-bottom:12px">
+      <div class="fg"><label class="lbl">Nom du service *</label><input class="fc" name="nom" placeholder="Cardiologie, Urgences…"></div>
+      <div class="fg"><label class="lbl">Statut</label><select class="fc" name="statut">{% for val, lbl in statuts %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fg" style="margin-bottom:13px"><label class="lbl">Description</label><input class="fc" name="description" placeholder="Optionnel"></div>
+    <button class="btn btn-p" type="submit">Ajouter le service</button>
+  </form>
+</div>
+
+<div style="font-family:var(--fh);font-size:1.05rem;font-weight:700;margin-bottom:14px">🏥 Services ({{ services|length }})</div>
+{% for s in services %}
+<div class="card" style="margin-bottom:12px">
+  <form method="post" action="{% url 'medical:admin_service_modifier' s.pk %}">
+    {% csrf_token %}
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:9px">
+        <strong>{{ s.nom }}</strong>
+        {% if s.statut == 'ouvert' %}<span class="badge b-ok">🟢 Ouvert</span>
+        {% elif s.statut == 'maintenance' %}<span class="badge b-warn">🛠️ Maintenance</span>
+        {% else %}<span class="badge b-err">🔴 Fermé</span>{% endif %}
+      </div>
+    </div>
+    <div class="fgrid" style="margin-bottom:10px">
+      <div class="fg"><label class="lbl">Nom</label><input class="fc" name="nom" value="{{ s.nom }}"></div>
+      <div class="fg"><label class="lbl">Statut</label><select class="fc" name="statut">{% for val, lbl in statuts %}<option value="{{ val }}"{% if val == s.statut %} selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label class="lbl">Description</label><input class="fc" name="description" value="{{ s.description }}" placeholder="Optionnel"></div>
+    <div class="tact">
+      <button class="btn btn-s btn-sm" type="submit">Enregistrer</button>
+    </div>
+  </form>
+  <form method="post" action="{% url 'medical:admin_service_supprimer' s.pk %}" onsubmit="return confirm('Supprimer ce service ?')" style="margin-top:8px">
+    {% csrf_token %}
+    <button class="btn btn-d btn-sm" type="submit">🗑️ Supprimer</button>
+  </form>
+</div>
+{% empty %}
+<div class="empty"><div class="empty-ic">🏥</div><div class="empty-t">Aucun service</div></div>
+{% endfor %}
+{% endblock %}
