@@ -9,4 +9,5 @@ urlpatterns = [
     path("connexion/", views.login_view, name="login"),
     path("deconnexion/", views.logout_view, name="logout"),
     path("mot-de-passe/", views.changer_mot_de_passe, name="changer_mdp"),
+    path("parametres/", views.parametres, name="parametres"),
 ]

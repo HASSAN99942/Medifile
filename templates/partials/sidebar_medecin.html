@@ -12,7 +12,7 @@
     <button class="ni{% if active == 'd-ordos' %} act{% endif %}" onclick="location.href='{% url 'consent:medecin_ordonnances' %}'"><span class="ic">💊</span>Ordonnances</button>
     <button class="ni{% if active == 'd-results' %} act{% endif %}" onclick="location.href='{% url 'consent:medecin_resultats' %}'"><span class="ic">🧪</span>Résultats</button>
     <div class="s-sect" style="margin-top:10px">Compte</div>
-    <button class="ni{% if active == 'd-settings' %} act{% endif %}" onclick="location.href='#'"><span class="ic">⚙️</span>Paramètres</button>
+    <button class="ni{% if active == 'd-settings' %} act{% endif %}" onclick="location.href='{% url 'accounts:parametres' %}'"><span class="ic">⚙️</span>Paramètres</button>
     <button class="ni" onclick="location.href='{% url 'accounts:logout' %}'"><span class="ic">🚪</span>Déconnexion</button>
   </nav>
   <div class="s-foot">

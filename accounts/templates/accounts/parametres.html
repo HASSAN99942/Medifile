@@ -1,0 +1,76 @@
+{% extends "dashboard_base.html" %}
+
+{% block sidebar %}{% include "partials/sidebar_medecin.html" %}{% endblock %}
+
+{% block content %}
+<div style="max-width:680px">
+
+  {% if messages %}
+  <div style="background:#C6F6D5;color:#276749;border-radius:var(--rs);padding:11px 13px;font-size:.85rem;margin-bottom:18px">
+    {% for message in messages %}<div>✅ {{ message }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-hdr"><div class="card-ttl">👤 Mon profil médecin</div></div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+      <div class="av av-lg">{{ user.prenom|slice:":1"|upper }}{{ user.nom|slice:":1"|upper }}</div>
+      <div>
+        <div style="font-family:var(--fh);font-size:1.2rem;font-weight:800">Dr. {{ user.prenom }} {{ user.nom }}</div>
+        <div style="color:var(--slate)">{{ medecin.specialite|default:"—" }} · {{ etablissement.nom|default:"—" }}</div>
+        {% if medecin %}<div style="font-size:.78rem;color:var(--slate)">N° ordre : {{ medecin.numero_ordre }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if profil_errors %}
+    <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:14px">
+      {% for e in profil_errors %}<div>❌ {{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form" value="profil">
+      <div class="fgrid">
+        <div class="fg"><label class="lbl">Prénom</label><input class="fc" name="prenom" value="{{ data.prenom }}"></div>
+        <div class="fg"><label class="lbl">Nom</label><input class="fc" name="nom" value="{{ data.nom }}"></div>
+        <div class="fg"><label class="lbl">Email</label><input class="fc" type="email" name="email" value="{{ data.email }}"></div>
+        <div class="fg"><label class="lbl">Langue</label>
+          <select class="fc" name="langue">
+            {% for code, libelle in langues %}<option value="{{ code }}"{% if code == data.langue %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Spécialité</label><input class="fc" value="{{ medecin.specialite|default:'—' }}" readonly style="background:var(--mist)"></div>
+        <div class="fg"><label class="lbl">Établissement</label><input class="fc" value="{{ etablissement.nom|default:'—' }}" readonly style="background:var(--mist)"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end">
+        <button class="btn btn-p" type="submit">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl" style="margin-bottom:16px">🔑 Changer mon mot de passe</div>
+
+    {% if mdp_errors %}
+    <div style="background:#FED7D7;color:#822727;border-radius:var(--rs);padding:11px 13px;font-size:.83rem;margin-bottom:14px">
+      {% for e in mdp_errors %}<div>❌ {{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form" value="motdepasse">
+      <div class="fg" style="margin-bottom:13px"><label class="lbl">Mot de passe actuel</label><input class="fc" type="password" name="mdp_actuel" placeholder="••••••••"></div>
+      <div class="fgrid">
+        <div class="fg"><label class="lbl">Nouveau mot de passe</label><input class="fc" type="password" name="mdp_nouveau" placeholder="Min. 8 caractères"></div>
+        <div class="fg"><label class="lbl">Confirmer</label><input class="fc" type="password" name="mdp_confirmation" placeholder="Répétez le mot de passe"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end">
+        <button class="btn btn-p" type="submit">Modifier le mot de passe</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

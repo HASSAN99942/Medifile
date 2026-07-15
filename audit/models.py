@@ -12,6 +12,7 @@ class AuditLog(models.Model):
         LOGOUT = "LOGOUT", _("Déconnexion")
         INSTALLATION = "INSTALLATION", _("Installation")
         CHANGEMENT_MDP = "CHANGEMENT_MDP", _("Changement de mot de passe")
+        MODIFICATION_PROFIL = "MODIFICATION_PROFIL", _("Modification du profil")
         CREATION_MEDECIN = "CREATION_MEDECIN", _("Création d'un compte médecin")
         VALIDATION_MEDECIN = "VALIDATION_MEDECIN", _("Validation d'un compte médecin")
         SUSPENSION_MEDECIN = "SUSPENSION_MEDECIN", _("Suspension d'un compte médecin")

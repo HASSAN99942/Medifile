@@ -1,9 +1,13 @@
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils import translation
 
 from audit.models import AuditLog, log_action
 
+from .decorators import role_required
 from .models import Etablissement, User
 
 
@@ -134,6 +138,92 @@ def logout_view(request):
         log_action(AuditLog.Action.LOGOUT, request=request, user=request.user)
         auth_logout(request)
     return redirect("accounts:login")
+
+
+@role_required("medecin")
+def parametres(request):
+    """Le médecin modifie lui-même son profil (prénom, nom, email, langue)
+    et son mot de passe. Deux formulaires distincts sur la même page."""
+    user = request.user
+    medecin = getattr(user, "medecin", None)
+    profil_errors = []
+    mdp_errors = []
+    data = {"prenom": user.prenom, "nom": user.nom, "email": user.email or "", "langue": user.langue}
+
+    if request.method == "POST":
+        formulaire = request.POST.get("form")
+
+        if formulaire == "profil":
+            data["prenom"] = request.POST.get("prenom", "").strip()
+            data["nom"] = request.POST.get("nom", "").strip()
+            data["email"] = request.POST.get("email", "").strip()
+            langue = request.POST.get("langue", user.langue)
+            if langue not in dict(User.Langue.choices):
+                langue = user.langue
+            data["langue"] = langue
+
+            if not data["prenom"] or not data["nom"]:
+                profil_errors.append("Le prénom et le nom sont requis.")
+            if not data["email"]:
+                profil_errors.append("L'email est requis.")
+            elif User.objects.filter(email__iexact=data["email"]).exclude(pk=user.pk).exists():
+                profil_errors.append("Cet email est déjà utilisé.")
+
+            if not profil_errors:
+                user.prenom = data["prenom"]
+                user.nom = data["nom"]
+                user.email = data["email"]
+                user.langue = langue
+                user.save(update_fields=["prenom", "nom", "email", "langue"])
+                log_action(
+                    AuditLog.Action.MODIFICATION_PROFIL,
+                    request=request,
+                    user=user,
+                    detail=f"{user.prenom} {user.nom} ({user.email})",
+                )
+                # Applique la langue immédiatement (cookie lu par LocaleMiddleware).
+                translation.activate(langue)
+                messages.success(request, "Profil mis à jour.")
+                response = redirect("accounts:parametres")
+                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, langue)
+                return response
+
+        elif formulaire == "motdepasse":
+            actuel = request.POST.get("mdp_actuel", "")
+            nouveau = request.POST.get("mdp_nouveau", "")
+            confirmation = request.POST.get("mdp_confirmation", "")
+
+            if not user.check_password(actuel):
+                mdp_errors.append("Le mot de passe actuel est incorrect.")
+            if not nouveau:
+                mdp_errors.append("Le nouveau mot de passe est requis.")
+            elif len(nouveau) < 8:
+                mdp_errors.append("Le nouveau mot de passe doit contenir au moins 8 caractères.")
+            elif nouveau != confirmation:
+                mdp_errors.append("Les mots de passe ne correspondent pas.")
+
+            if not mdp_errors:
+                user.set_password(nouveau)
+                user.save(update_fields=["password"])
+                update_session_auth_hash(request, user)
+                log_action(AuditLog.Action.CHANGEMENT_MDP, request=request, user=user)
+                messages.success(request, "Mot de passe modifié.")
+                return redirect("accounts:parametres")
+
+    return render(
+        request,
+        "accounts/parametres.html",
+        {
+            "page_title": "Paramètres",
+            "active": "d-settings",
+            "data": data,
+            "profil_errors": profil_errors,
+            "mdp_errors": mdp_errors,
+            "medecin": medecin,
+            "etablissement": Etablissement.get(),
+            "langues": User.Langue.choices,
+        },
+    )
 
 
 @login_required
